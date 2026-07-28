@@ -79,7 +79,7 @@ export const joinGroup = async (groupId: string, userId: number) => {
         {
             const arr = await client.sMembers(`group:member:${normalizedGroupId}`)
 
-            properly distribute themes across all groups
+            evenly distribute themes across all groups(using round robin algorithm(a good way of doing this is that we take the group number like 1st group, 2nd group like this, that is being stored in redis and apply mod 6 to the group number, and then assign theme[at that number]to that group, and increase the group number count in redis by 1))
             const themeAssigned = 'Theme 1'
             const genres = await Promise.all(arr.map(id => client.get(`genre:${id}`)))
             if (genres.some(g => g === null)) throw new apiError(500, "Genre Missing", "Genre of one/more then one candidate is missing, might be because they are already a part of any other group")
@@ -118,6 +118,8 @@ export const joinGroup = async (groupId: string, userId: number) => {
 
             // redis cleanup
             for (let i = 0; i < 4; i++)    await client.del(`genre:${arr[i]}`)
+            await client.del(`group:${normalizedGroupId}`)
+            await client.del(`group:member:${normalizedGroupId}`)
 
             return { status: 201, responseData: responseData }
         }

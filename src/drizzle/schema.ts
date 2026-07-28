@@ -60,12 +60,12 @@ export const GroupMember = pgTable('group_member', {
 })
 
 // This table will have only one row, and its value will be created from the db itself, only the fileds will be updated from the backend services
-Don't forget to add the initial value of this table directly inside the db
+Don't forget to add the initial value of this table directly inside the db (id: auto, startTime: null initially (will be ristered when admin starts the game), isStarted: false initially, duration: 3hr (convert it into seconds, then add) initially )
 export const GameConfig = pgTable('game_config', {
     id: serial().primaryKey(),
     startTime: timestamp(),
     isStarted: boolean().default(false),
-    duration: smallint().notNull()          // (in minutes)
+    duration: smallint().notNull()          // (in seconds)
 })
 
 

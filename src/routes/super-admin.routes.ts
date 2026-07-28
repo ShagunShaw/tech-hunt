@@ -13,7 +13,7 @@ router.get("/admins", verifyJWT, authorize('super-admin', 'admin'), superAdminCo
 
 router.delete("/admin/:adminId", verifyJWT, authorize("super-admin"), superAdminController.deleteAdmin)
 
-start the game (also clear up the set in redis which stores the list of all group names taken, to ensure no two groups have same name, just after the game starts. Also ensure that until all groups are not created, game cannot start)
+router.patch("/startGame", verifyJWT, authorize('super-admin'), superAdminController.startGame)
 
 finish the game (auto-finishes, but still handle it properly)
 

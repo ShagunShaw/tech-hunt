@@ -3,7 +3,6 @@ import { apiError } from "../utils/ApiError";
 import * as superAdminService from "../service/super-admin.service"
 import { apiResponse } from "../utils/ApiResponse";
 import { statusSchema } from "../validations/tokenUser.type"
-import { waitForDebugger } from "inspector";
 
 export const getPendingAdmins = async (req: Request, res: Response) => {
     try {
@@ -28,7 +27,7 @@ export const getPendingAdmins = async (req: Request, res: Response) => {
 export const manageApproval = async (req: Request, res: Response) => {
     try {
         Wait, instead of approving each admin one by one, which would lead to multiple db calls, replace this now and use 'Batch Processing', to approve multiple admins at once.
-        const { adminId } = req.params
+            const { adminId } = req.params
 
         if (!adminId) return res.status(400).json(new apiError(400, "Admin Id missing", "Admin id is missing in params"))
 
@@ -76,7 +75,7 @@ export const getApprovedAdmins = async (req: Request, res: Response) => {
 export const deleteAdmin = async (req: Request, res: Response) => {
     try {
         Instead of deleting each admin one by one, which would lead to multiple db calls, replace this now and use 'Batch Processing', to delete multiple admins at once.
-        const { adminId } = req.params
+            const { adminId } = req.params
 
         if (!adminId) return res.status(400).json(new apiError(400, "Admin Id missing", "Admin id not found in params"))
 
@@ -97,3 +96,30 @@ export const deleteAdmin = async (req: Request, res: Response) => {
         );
     }
 }
+
+export const startGame = async (req: any, res: Response) => {
+    try {
+        const result = await superAdminService.startTime();
+        
+        return res.status(200).json(new apiResponse(200, result, "Game Started!"))
+
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            return res.status(error.status).json(error);
+        }
+
+        const status = error.status ?? 500;
+        const errName = error.errName ?? error.name ?? "InternalServerError";
+        const errMessage = error.errMessage ?? error.message ?? "An unexpected error occurred";
+
+        return res.status(status).json(
+            new apiError(status, errName, errMessage)
+        );
+    }
+}
+
+isStarted = false → block(handles game not started and super- admin ended it, both)
+isStarted = true AND currentTime - startTime < duration → allow
+isStarted = true AND currentTime - startTime >= duration → block(auto end)
+
+Additionally, also update the duartion value from 3 hr to(currentTime - StartTime) if super- admin ends the game, in the db, for any future reference, that exactly how much duration had been given to the game
