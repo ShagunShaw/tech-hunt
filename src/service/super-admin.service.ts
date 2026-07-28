@@ -81,8 +81,11 @@ export const deleteAdminService = async (adminId: number) => {
     }
 }
 
-export const startTime = async () => {
+export const startGame = async () => {
     try {
+        const val = await client.exists('game:isRunning');
+        if (val) throw new apiError(400, "Cannot re-Start Game", "Cannot re-start the game as it is either running or has been ended previously")
+
         const iteratorParams = { MATCH: 'group:member:*', COUNT: 100 };
         for await (const key of client.scanIterator(iteratorParams)) {
             // If the loop runs even once, it means at least one record has NOT expired yet
@@ -99,22 +102,54 @@ export const startTime = async () => {
         const startingTime = new Date();
 
         const result = await db.update(GameConfig)
-            .set({ isStarted: true, startTime: startingTime })
+            .set({ isRunning: true, startTime: startingTime })
             .returning({ duration: GameConfig.duration })
 
         if (result.length == 0) throw new apiError(500, "Game Not Started", "Something went wrong while starting the game")
 
-        await client.set('game:isStarted', 'true')
+        await client.set('game:isRunning', 'true')
         await client.set('game:duration', String(result[0]?.duration))
         await client.set('game:startTime', String(startingTime.getTime()))
 
         await client.del('group:registered')
 
-        Yes, a Bull Queue is the right approach.Schedule it to run at startTime + duration, set isStarted = false automatically in the db.
-
-        const data = { gameStarted: true, gameDuration: result[0]?.duration, gameStartTime: startingTime };
+        const data = { gameRunning: true, gameDuration: result[0]?.duration, gameStartTime: startingTime };
         return data;
 
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        throw new apiError(
+            500,
+            error.name || "InternalServerError",
+            error.message || "An unexpected error occurred"
+        );
+    }
+}
+
+export const endGame = async () => {
+    try {
+        const val = await client.get('game:isRunning');
+        if (!val || val === 'false') throw new apiError(400, "Cannot End Game", "Cannot end the game as it is either not started or has been ended previously")
+
+        Also freeze the 'timeTaken' field of Groups Table, so that their timer does not continues running while the game has been ended(make this change for both auto - finish and manual finish). Although the game routes will be blocked after the duration exceeded, but their timer will continue running, need to freeze it manually.
+
+        const startTime = await client.get('game:startTime')
+        const duration = Math.ceil((new Date().getTime() - Number(startTime)) / 1000)
+
+        const result = await db.update(GameConfig)
+            .set({ isRunning: false, duration })
+            .returning({ duration: GameConfig.duration })
+
+        if (result.length == 0) throw new apiError(500, "Game Not Ended", "Something went wrong while ending the game")
+
+        await client.set('game:isRunning', 'false')
+        await client.set('game:duration', String(result[0]?.duration))
+
+        const data = { gameRunning: false, gameDuration: result[0]?.duration }
+        return data
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;

@@ -64,7 +64,7 @@ Don't forget to add the initial value of this table directly inside the db (id: 
 export const GameConfig = pgTable('game_config', {
     id: serial().primaryKey(),
     startTime: timestamp(),
-    isStarted: boolean().default(false),
+    isRunning: boolean().default(false),
     duration: smallint().notNull()          // (in seconds)
 })
 

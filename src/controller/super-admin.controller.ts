@@ -99,8 +99,8 @@ export const deleteAdmin = async (req: Request, res: Response) => {
 
 export const startGame = async (req: any, res: Response) => {
     try {
-        const result = await superAdminService.startTime();
-        
+        const result = await superAdminService.startGame();
+
         return res.status(200).json(new apiResponse(200, result, "Game Started!"))
 
     } catch (error: any) {
@@ -118,8 +118,22 @@ export const startGame = async (req: any, res: Response) => {
     }
 }
 
-isStarted = false → block(handles game not started and super- admin ended it, both)
-isStarted = true AND currentTime - startTime < duration → allow
-isStarted = true AND currentTime - startTime >= duration → block(auto end)
+export const endGame = async (req: any, res: Response) => {
+    try {
+        const result = await superAdminService.endGame();
 
-Additionally, also update the duartion value from 3 hr to(currentTime - StartTime) if super- admin ends the game, in the db, for any future reference, that exactly how much duration had been given to the game
+        return res.status(200).json(new apiResponse(200, result, "Game Ended!"))
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            return res.status(error.status).json(error);
+        }
+
+        const status = error.status ?? 500;
+        const errName = error.errName ?? error.name ?? "InternalServerError";
+        const errMessage = error.errMessage ?? error.message ?? "An unexpected error occurred";
+
+        return res.status(status).json(
+            new apiError(status, errName, errMessage)
+        );
+    }
+}
