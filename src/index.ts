@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser'
 import UserRouter from "./routes/user.router"
 import SuperAdminRouter from "./routes/super-admin.routes"
 import GroupRouter from "./routes/group.routes"
+import ThemeRouter from "./routes/theme.routes"
 
 await client.connect();
 
@@ -27,9 +28,10 @@ app.use(express.urlencoded({ extended: true }))
 app.use("/api/v1", UserRouter)
 app.use("/api/v1/super-admin", SuperAdminRouter)
 app.use("/api/v1/group", GroupRouter)
+app.use("/api/v1/theme", ThemeRouter)
 
 
-app.get("/", (req, res) => {
+app.get("/health", (req, res) => {
     return res.status(200)
               .json(new apiResponse(200, {health: "ok"}, "Server is healthy!"))
 })

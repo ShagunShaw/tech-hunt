@@ -9,3 +9,12 @@ export const POINTS = {
 }
 
 export const THEMES = ['Theme 1', 'Theme 2', 'Theme 3', 'Theme 4', 'Theme 5', 'Theme 6']
+
+export const TECH_DOMAINS = {
+    0: 'DSA',
+    1: 'Web',
+    2: 'AI/ML',
+    3: 'Cybersecurity',
+    4: 'Cloud & Devops',
+    5: 'BlockChain'
+}

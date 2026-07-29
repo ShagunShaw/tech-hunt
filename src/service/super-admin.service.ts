@@ -99,17 +99,17 @@ export const startGame = async () => {
         }
         // now if there is a particpant who has not joined a group but when asking in public who is he, he is not responding also, so there is a way I can look into my redis without running any code in the application (on redis CLI we will), who is that one participant. and if required we can also remove that partcipant from redis cache without any code in application but using CLI command
 
-        const startingTime = new Date();
+        before starting the game, parallelise questions assignment across 6 domains using Promise.all (agr context ni milra what is it, then ask claude, it knows about it)
 
         const result = await db.update(GameConfig)
-            .set({ isRunning: true, startTime: startingTime })
-            .returning({ duration: GameConfig.duration })
+            .set({ isRunning: true, startTime: new Date() })
+            .returning({ duration: GameConfig.duration, startTime: GameConfig.startTime })
 
         if (result.length == 0) throw new apiError(500, "Game Not Started", "Something went wrong while starting the game")
 
         await client.set('game:isRunning', 'true')
         await client.set('game:duration', String(result[0]?.duration))
-        await client.set('game:startTime', String(startingTime.getTime()))
+        await client.set('game:startTime', String(result[0]?.startTime))
 
         await client.del('group:registered')
 
