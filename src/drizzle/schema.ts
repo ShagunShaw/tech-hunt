@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, pgEnum, timestamp, jsonb, smallint, boolean, numeric, text, integer } from "drizzle-orm/pg-core"
+import { pgTable, serial, varchar, pgEnum, timestamp, jsonb, smallint, boolean, numeric, text, integer, point } from "drizzle-orm/pg-core"
 import { it } from "zod/locales"
 
 export const roleEnum= pgEnum('role', ['admin', 'superAdmin'])
@@ -69,6 +69,7 @@ export const GameConfig = pgTable('game_config', {
     duration: smallint().notNull()          // (in seconds)
 })
 
+Add the Hints part also in questions (and penalties also, if not configured anywhere, but I think its configured at point.constant.ts file, just we need to implement it, check it once)
 export const Question = pgTable('question', {
     id: serial().primaryKey(),
     question: text().notNull(),
@@ -78,7 +79,7 @@ export const Question = pgTable('question', {
 
 export const Theme = pgTable('theme', {
     id: serial().primaryKey(),
-    name: varchar({length: 50}).notNull(),
+    name: varchar({length: 50}).notNull().unique(),
     messagesOrder: integer().array(),      // will store array of message's id from the message table in sequence 
     questionOrder: integer().array()       // if the array is [52, 31, 10, 23, 11] that means DSA question id is 52, web ques id is 31, etc. from the same table (but then how will be distribute question of each domain to each theme if all questions are in the same table) 
 })

@@ -7,9 +7,9 @@ const router: Router= Router()
 
 router.post("/", verifyJWT, authorize('admin', 'super-admin'), theme.createTheme)
 
-router.patch("/", verifyJWT, authorize('admin', 'super-admin'), theme.updateTheme)
+router.patch("/:themeId", verifyJWT, authorize('admin', 'super-admin'), theme.updateTheme)
 
-router.delete("/", verifyJWT, authorize('admin', 'super-admin'), theme.deleteTheme)
+router.delete("/:themeId", verifyJWT, authorize('admin', 'super-admin'), theme.deleteTheme)
 
 router.post("/message/:theme", verifyJWT, authorize('admin', 'super-admin'), theme.addThemeMessage)
 
