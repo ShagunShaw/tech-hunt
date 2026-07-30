@@ -89,7 +89,6 @@ Remove the below comment later, once you are done building that part:
 
 export const ThemeMessage = pgTable('theme_message', {
     id: serial().primaryKey(),
-    // theme: smallint().notNull().references(() => Group.id, { onDelete: 'cascade' }),
     theme: smallint().notNull().references(() => Theme.id, { onDelete: 'cascade' }),
     message: text().notNull()
 })

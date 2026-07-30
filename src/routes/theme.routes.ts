@@ -11,13 +11,13 @@ router.patch("/:themeId", verifyJWT, authorize('admin', 'super-admin'), theme.up
 
 router.delete("/:themeId", verifyJWT, authorize('admin', 'super-admin'), theme.deleteTheme)
 
-router.post("/message/:theme", verifyJWT, authorize('admin', 'super-admin'), theme.addThemeMessage)
+router.post("/message/:themeId", verifyJWT, authorize('admin', 'super-admin'), theme.addThemeMessage)
 
-router.patch("/message/:theme", verifyJWT, authorize('admin', 'super-admin'), theme.updateThemeMessage)
+router.patch("/message/:messageId", verifyJWT, authorize('admin', 'super-admin'), theme.updateThemeMessage)
 
-router.delete("/message/:theme", verifyJWT, authorize('admin', 'super-admin'), theme.deleteThemeMessage)
+router.delete("/message/:messageId", verifyJWT, authorize('admin', 'super-admin'), theme.deleteThemeMessage)
 
-router.post("/reorder/:theme", verifyJWT, authorize('admin', 'super-admin'), theme.reorderThemeMessage)
+router.post("/reorder/:themeId", verifyJWT, authorize('admin', 'super-admin'), theme.reorderThemeMessage)
 
 
 export default router;
