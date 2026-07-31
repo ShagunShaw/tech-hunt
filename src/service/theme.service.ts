@@ -3,6 +3,29 @@ import { db } from "../drizzle/db";
 import { Theme, ThemeMessage } from "../drizzle/schema";
 import { apiError } from "../utils/ApiError";
 
+export const getAllTheme = async () => {
+    try {
+        const result = await db.select({        // 'result' will be an array of JSON containing all the rows from the table, and each JSON will have two fields - id, name
+            // If no theme is present in the database, it will return result = []
+            id: Theme.id,
+            name: Theme.name
+        })
+            .from(Theme)
+
+        return result;
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        throw new apiError(
+            500,
+            error.name || "InternalServerError",
+            error.message || "An unexpected error occurred"
+        );
+    }
+}
+
 export const createTheme = async (theme: string) => {
     try {
         const [totalThemeCount] = await db.select({ value: count() }).from(Theme);
@@ -39,7 +62,7 @@ export const updateTheme = async (themeId: any, newThemeName: string) => {
     try {
         const parsedThemeId = Number(themeId)
 
-        if (!Number.isInteger(parsedThemeId)) {
+        if (isNaN(parsedThemeId)) {
             throw new apiError(400, "Invalid theme ID", "Theme ID must be a valid number")
         }
 
@@ -68,7 +91,7 @@ export const deleteTheme = async (themeId: any) => {
     try {
         const parsedThemeId = Number(themeId)
 
-        if (!Number.isInteger(parsedThemeId)) {
+        if (isNaN(parsedThemeId)) {
             throw new apiError(400, "Invalid theme ID", "Theme ID must be a valid number")
         }
 
@@ -90,11 +113,63 @@ export const deleteTheme = async (themeId: any) => {
     }
 }
 
+export const gettAllMessage = async (themeId: any) => {
+    try {
+        const parsedThemeId = Number(themeId);
+        if (isNaN(parsedThemeId)) {
+            throw new apiError(400, "Invalid theme ID", "Theme ID must be a valid number");
+        }
+
+        const themeRows = await db.select({ 
+            messagesOrder: Theme.messagesOrder 
+        })
+        .from(Theme)
+        .where(eq(Theme.id, parsedThemeId));
+
+        // ' !themeRows[0]?.messagesOrder '   returns true for both null AND empty array []
+        if (themeRows.length === 0 || !themeRows[0]?.messagesOrder) {
+            return [];
+        }
+
+        const orderArray = themeRows[0].messagesOrder; // e.g., [6, 2]
+
+        const rawMessages = await db.select({ 
+            id: ThemeMessage.id, 
+            message: ThemeMessage.message 
+        })
+        .from(ThemeMessage)
+        .where(eq(ThemeMessage.theme, parsedThemeId));
+
+        if (rawMessages.length === 0) {
+            return [];
+        }
+
+        const messageMap = new Map(rawMessages.map(msg => [msg.id, msg]));
+
+        const sortedResult = orderArray
+            .map(id => messageMap.get(id))
+            .filter((msg): msg is { id: number; message: string } => msg !== undefined); 
+            // The filter removes any IDs present in the order list but missing in database rows
+
+        return sortedResult;
+
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+        throw new apiError(
+            500, 
+            error.name || "InternalServerError", 
+            error.message || "An unexpected error occurred"
+        );
+    }
+};
+
 export const addMessage = async (themeId: any, message: string) => {
     try {
         const parsedThemeId = Number(themeId)
 
-        if (!Number.isInteger(parsedThemeId)) {
+        if (isNaN(parsedThemeId)) {
             throw new apiError(400, "Invalid theme ID", "Theme ID must be a valid number")
         }
 
@@ -143,7 +218,7 @@ export const updateMessage = async (messageId: any, updatedMessage: string) => {
     try {
         const parsedMessageId = Number(messageId)
 
-        if (!Number.isInteger(parsedMessageId)) {
+        if (isNaN(parsedMessageId)) {
             throw new apiError(400, "Invalid message ID", "Message ID must be a valid number")
         }
 
@@ -172,7 +247,7 @@ export const deleteMessage = async (messageId: any) => {
     try {
         const parsedMessageId = Number(messageId)
 
-        if (!Number.isInteger(parsedMessageId)) {
+        if (isNaN(parsedMessageId)) {
             throw new apiError(400, "Invalid message ID", "Message ID must be a valid number")
         }
 
@@ -216,7 +291,7 @@ export const reorderMessage = async (themeId: any, newOrder: any) => {
     try {
         const parsedThemeId = Number(themeId);
 
-        if (!Number.isInteger(parsedThemeId)) {
+        if (isNaN(parsedThemeId)) {
             throw new apiError(400, "Invalid theme ID", "Theme ID must be a valid number");
         }
 
@@ -243,7 +318,7 @@ export const reorderMessage = async (themeId: any, newOrder: any) => {
             throw new apiError(500, "Something went wrong", "Unable to reorder messages for this theme ");
         }
 
-        return {themeId: parsedThemeId, messageArray: updatedTheme[0]?.messagesOrder}
+        return { themeId: parsedThemeId, messageArray: updatedTheme[0]?.messagesOrder }
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;
