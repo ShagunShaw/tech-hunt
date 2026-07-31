@@ -6,10 +6,11 @@ import { apiResponse } from './utils/ApiResponse'
 import client from './redis.config'
 import cookieParser from 'cookie-parser'
 // no need to connect our db here, its already connected, so now just use it in any file you want
-import UserRouter from "./routes/user.router"
+import UserRouter from "./routes/user.routes"
 import SuperAdminRouter from "./routes/super-admin.routes"
 import GroupRouter from "./routes/group.routes"
 import ThemeRouter from "./routes/theme.routes"
+import QuestionRouter from "./routes/question.routes"
 
 await client.connect();
 
@@ -23,12 +24,13 @@ Also dont forget to add the row of 'GameConfig' table directly in our db
 
 app.use(cookieParser())
 app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.urlencoded({ extended: true }))     // When extended is true, sending form inputs with an array in it will automatically arrive in req.body as a native JavaScript array, completely bypassing manual conversion to an array.
 
 app.use("/api/v1", UserRouter)
 app.use("/api/v1/super-admin", SuperAdminRouter)
 app.use("/api/v1/group", GroupRouter)
 app.use("/api/v1/theme", ThemeRouter)
+app.use("/api/v1/question", QuestionRouter)
 
 
 app.get("/health", (req, res) => {
