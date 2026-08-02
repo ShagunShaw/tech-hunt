@@ -36,7 +36,7 @@ export const updateQuestion = async (question: string, domain: string, answer: a
             .where(eq(Question.id, parsedQuestionId))
             .returning({ question: Question.question, answer: Question.answer, domain: Question.domain })
 
-        if (result.length === 0) throw new apiError(500, "Internal Server Error", "Something went wrong while updating the values of the Question table")
+        if (result.length === 0) throw new apiError(404, "Not Found", "No such question of this id is found")
 
         return result;
     } catch (error: any) {

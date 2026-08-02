@@ -67,9 +67,23 @@ export const updateQuestion = async (req: Request, res: Response) => {
     }
 }
 
-export const deleteQuestion = (req: Request, res: Response) => {
+export const deleteQuestion = async (req: Request, res: Response) => {
     try {
+        const { questionId } = req.params
 
+        const parsedQuestionId = Number(questionId)
+        if (isNaN(parsedQuestionId)) {
+            throw new apiError(422, "Invalid question ID", "Question ID must be a valid number");
+        }
+
+        const result = await db.delete(Question)
+                               .where(eq(Question.id, parsedQuestionId))
+                               .returning({ id: Question.id })
+
+        if(result.length === 0)     throw new apiError(404, "Not Found", "No such question of this id is found")
+
+        return res.status(200)
+                  .json(new apiResponse(200, result, "Question deleted successfully!"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);

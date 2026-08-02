@@ -97,7 +97,7 @@ export const joinGroup = async (groupId: string, userId: number) => {
                     .returning({ id: Group.id });
 
                 if (result.length === 0) {
-                    throw new Error("Group Creation failed")
+                    throw new apiError(500, "Something went wrong", "Something went wrong while inserting the data")
                 }
 
                 const newGroupId = Number(result[0]?.id);

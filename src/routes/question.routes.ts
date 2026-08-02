@@ -11,7 +11,7 @@ router.post("/", verifyJWT, authorize('admin', 'super-admin'), question.addQuest
 
 router.patch("/:questionId", verifyJWT, authorize('admin', 'super-admin'), question.updateQuestion)
 
-router.delete("/", verifyJWT, authorize('admin', 'super-admin'), question.deleteQuestion)
+router.delete("/:questionId", verifyJWT, authorize('admin', 'super-admin'), question.deleteQuestion)
 
 // Fetch Question (domain-wise, domain should be passed as query param; if no query params is provided then fetch all)
 router.get("/", verifyJWT, authorize('admin', 'super-admin'), question.getQuestion)
