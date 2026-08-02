@@ -15,6 +15,6 @@ export const TECH_DOMAINS = {
     1: 'Web',
     2: 'AI/ML',
     3: 'Cybersecurity',
-    4: 'Cloud & Devops',
+    4: 'Cloud&Devops',
     5: 'BlockChain'
 }

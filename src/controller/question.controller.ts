@@ -3,30 +3,15 @@ import { apiError } from "../utils/ApiError";
 import { apiResponse } from "../utils/ApiResponse";
 import * as questionService from "../service/question.service"
 
-import { Question } from "../drizzle/schema";
-import { db } from "../drizzle/db";
-import { eq } from "drizzle-orm";
-import { domainSchema } from "../validations/tokenUser.type";
 
 export const addQuestion = async (req: Request, res: Response) => {
     try {
         const { question, answer, domain } = req.body
 
-        if (!question || !domain || !answer) throw new apiError(422, "Missing Values", "Either question or domain or answer field is missing")
-
-        if (!Array.isArray(answer)) throw new apiError(422, "Invalid Format", "'answer' field should be an array even if it has only 1 value")
-
-        const validate = domainSchema.safeParse(domain)
-        if (!validate.success) throw new apiError(422, "Domain Enum Mismatch", "Domain should be of the specified enums only")
-
-        const result = await db.insert(Question)
-            .values({ question, answer, domain })
-            .returning({ id: Question.id })
-
-        if (result.length === 0) throw new apiError(500, "Could not insert", "Something went wrong while inserting the data")
+        const result = await questionService.addQuestion(question, domain, answer)
 
         return res.status(201)
-            .json(new apiResponse(201, "Insert Successful", "Question inserted successfully"))
+            .json(new apiResponse(201, result, "Question inserted successfully"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);
@@ -71,19 +56,10 @@ export const deleteQuestion = async (req: Request, res: Response) => {
     try {
         const { questionId } = req.params
 
-        const parsedQuestionId = Number(questionId)
-        if (isNaN(parsedQuestionId)) {
-            throw new apiError(422, "Invalid question ID", "Question ID must be a valid number");
-        }
-
-        const result = await db.delete(Question)
-                               .where(eq(Question.id, parsedQuestionId))
-                               .returning({ id: Question.id })
-
-        if(result.length === 0)     throw new apiError(404, "Not Found", "No such question of this id is found")
+        const result = await questionService.deleteQuestion(questionId)
 
         return res.status(200)
-                  .json(new apiResponse(200, result, "Question deleted successfully!"))
+            .json(new apiResponse(200, result, "Question deleted successfully!"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);
@@ -99,9 +75,14 @@ export const deleteQuestion = async (req: Request, res: Response) => {
     }
 }
 
-export const getQuestion = (req: Request, res: Response) => {
+export const getQuestion = async (req: Request, res: Response) => {
     try {
+        const { domain, page, limit } = req.query       
+        
+        const finalResult = await questionService.getQuestion(page, domain, limit)
 
+        return res.status(200)
+            .json(new apiResponse(200, finalResult, "Questions fetched successfully"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);

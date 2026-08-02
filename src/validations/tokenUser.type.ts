@@ -10,4 +10,4 @@ export const statusSchema = z.enum(['approved', 'rejected'])
 
 export const genreSchema = z.enum(['Sky', 'Stars', 'Earth', 'Sun'])
 
-export const domainSchema = z.enum(['DSA', 'Web', 'AI/ML', 'Cybersecurity', 'Cloud & Devops', 'BlockChain'])
+export const domainSchema = z.enum(['DSA', 'Web', 'AI/ML', 'Cybersecurity', 'Cloud&Devops', 'BlockChain'])

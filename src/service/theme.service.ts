@@ -71,7 +71,7 @@ export const updateTheme = async (themeId: any, newThemeName: string) => {
             .where(eq(Theme.id, parsedThemeId))
             .returning({ id: Theme.id });
 
-        if (result.length === 0) throw new apiError(500, "Could not update", "Something went wrong while updating the theme in the db")
+        if (result.length === 0) throw new apiError(404, "Not Found", "No such theme is found for this theme id")
 
         return { id: result[0]?.id }
     } catch (error: any) {
@@ -194,7 +194,7 @@ export const addMessage = async (themeId: any, message: string) => {
                 .returning({ messagesOrder: Theme.messagesOrder })
 
             if (themeMessageArray.length === 0) {
-                throw new apiError(500, "Could not update", "Something went wrong while updating the message array in the themes table in db")
+                throw new apiError(404, "Not Found", "No such theme of this theme id is found")
             }
 
             return { message: insertedMessage, themeMessageArray: themeMessageArray[0]?.messagesOrder }
@@ -227,7 +227,7 @@ export const updateMessage = async (messageId: any, updatedMessage: string) => {
             .where(eq(ThemeMessage.id, parsedMessageId))
             .returning({ id: ThemeMessage.id });
 
-        if (result.length === 0) throw new apiError(500, "Field not updated", "Something went wrong while updating the message field")
+        if (result.length === 0) throw new apiError(404, "Not Found", "No such message of this id is found in the db")
 
         return { messageId: result[0]?.id }
     } catch (error: any) {

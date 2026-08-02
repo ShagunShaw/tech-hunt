@@ -6,7 +6,7 @@ export const yearEnum= pgEnum('year', ['1st', '2nd', '3rd', '4th', '5th'])
 export const statusEnum= pgEnum('status', ['pending', 'approved', 'rejected'])
 export const groupStatusEnum= pgEnum('groupStatus', ['active', 'disqualified', 'aborted'])
 export const genreEnum= pgEnum('genre', ['Earth', 'Stars', 'Sun', 'Sky'])
-export const domainEnum= pgEnum('domain', ['DSA', 'Web', 'AI/ML', 'Cybersecurity', 'Cloud & Devops', 'BlockChain'])
+export const domainEnum= pgEnum('domain', ['DSA', 'Web', 'AI/ML', 'Cybersecurity', 'Cloud&Devops', 'BlockChain'])
 
 Assign proper theme values to this 'theme' enum. (Shyd yh naa lge, coz now instead of hard-coding the themes we are letting admins only to create the theme, so phle routes and controllers bnn jane do, then decide isko rkhna h ki ni)
 export const themeEnum= pgEnum('theme', ['Theme 1', 'Theme 2', 'Theme 3', 'Theme 4', 'Theme 5', 'Theme 6'])
