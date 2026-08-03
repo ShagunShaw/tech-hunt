@@ -74,7 +74,8 @@ export const Question = pgTable('question', {
     id: serial().primaryKey(),
     question: text().notNull(),
     answer: varchar('answer', { length: 50 }).array().notNull(),  
-    domain: domainEnum().notNull()
+    domain: domainEnum().notNull(),
+    hints: text().array().notNull()     // can add as many hints as the admin wants for a question
 })
 
 export const Theme = pgTable('theme', {

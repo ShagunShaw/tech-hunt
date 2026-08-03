@@ -136,6 +136,8 @@ export const endGame = async () => {
 
         Also freeze the 'timeTaken' field of Groups Table, so that their timer does not continues running while the game has been ended(make this change for both auto - finish and manual finish). Although the game routes will be blocked after the duration exceeded, but their timer will continue running, need to freeze it manually.
 
+        Also clear all records from the redis, that had been added to it, during or before the game. Dont forget to store final point and time taken for each group in the db, before clearing the redis
+
         const startTime = await client.get('game:startTime')
         const duration = Math.ceil((new Date().getTime() - Number(startTime)) / 1000)
 
