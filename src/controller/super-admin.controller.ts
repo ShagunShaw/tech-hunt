@@ -3,6 +3,7 @@ import { apiError } from "../utils/ApiError";
 import * as superAdminService from "../service/super-admin.service"
 import { apiResponse } from "../utils/ApiResponse";
 import { statusSchema } from "../validations/tokenUser.type"
+import { db } from "../drizzle/db";
 
 export const getPendingAdmins = async (req: Request, res: Response) => {
     try {
@@ -123,6 +124,29 @@ export const endGame = async (req: any, res: Response) => {
         const result = await superAdminService.endGame();
 
         return res.status(200).json(new apiResponse(200, result, "Game Ended!"))
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            return res.status(error.status).json(error);
+        }
+
+        const status = error.status ?? 500;
+        const errName = error.errName ?? error.name ?? "InternalServerError";
+        const errMessage = error.errMessage ?? error.message ?? "An unexpected error occurred";
+
+        return res.status(status).json(
+            new apiError(status, errName, errMessage)
+        );
+    }
+}
+
+export const disqualifyGroup = async (req: any, res: Response) => {
+    try {
+        const { groupId } = req.body
+
+        const result = await superAdminService.disqualifyGroup(groupId);
+
+        return res.status(200)
+                  .json(new apiResponse(200, result, "Group has been disqualified successfully"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);

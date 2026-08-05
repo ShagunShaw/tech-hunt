@@ -88,7 +88,7 @@ export const abort = async (req: any, res: Response) => {
 
         const { success } = await groupService.abortGroup(user.id, groupId)
 
-        if (!success) return res.status(403).json(new apiError(403, "Forbidden", "You are not allowed to abort this group as you are not a part of it"))
+        if (!success) return res.status(400).json(new apiError(400, "Cannot Abort", "Either you are not allowed to abort this group as you are not a part of it or the provided groupId does not exists"))
 
         return res.status(204).json(new apiResponse(204, {}, "Group aborted successfully"))
     } catch (error: any) {

@@ -157,8 +157,11 @@ export const abortGroup = async (userId: number, groupId: number) => {
             )
             .returning({ id: Group.id })
 
-        if (result.length == 0) return { success: false }
-        else return { success: true }
+        if (result.length == 0) return { success: false }   
+        else {
+            await client.sAdd('groups:aborted', String(groupId))
+            return { success: true }
+        } 
 
     } catch (error: any) {
         if (error instanceof apiError) {

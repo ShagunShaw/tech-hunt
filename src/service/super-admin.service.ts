@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm"
 import { db } from "../drizzle/db"
-import { Admin } from "../drizzle/schema"
+import { Admin, Group } from "../drizzle/schema"
 import { apiError } from "../utils/ApiError"
 import { GameConfig } from "../drizzle/schema";
 import client from "../redis.config";
+
 
 export const getAdmins = async (status: 'approved' | 'pending') => {
     try {
@@ -136,7 +137,7 @@ export const endGame = async () => {
 
         Also freeze the 'timeTaken' field of Groups Table, so that their timer does not continues running while the game has been ended(make this change for both auto - finish and manual finish). Although the game routes will be blocked after the duration exceeded, but their timer will continue running, need to freeze it manually.
 
-        Also clear all records from the redis, that had been added to it, during or before the game. Dont forget to store final point and time taken for each group in the db, before clearing the redis
+        Also clear all records from the redis, that had been added to it, during or before the game.Dont forget to store final point and time taken for each group in the db, before clearing the redis
 
         const startTime = await client.get('game:startTime')
         const duration = Math.ceil((new Date().getTime() - Number(startTime)) / 1000)
@@ -152,6 +153,36 @@ export const endGame = async () => {
 
         const data = { gameRunning: false, gameDuration: result[0]?.duration }
         return data
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        throw new apiError(
+            500,
+            error.name || "InternalServerError",
+            error.message || "An unexpected error occurred"
+        );
+    }
+}
+
+export const disqualifyGroup = async (groupId: any) => {
+    try {
+        const parsedGroupId = Number(groupId)
+        if (isNaN(parsedGroupId)) {
+            throw new apiError(400, "Invalid group ID", "Group ID must be a valid number")
+        }
+
+        const result = await db.update(Group)
+            .set({ status: 'disqualified' })
+            .where(eq(Group.id, parsedGroupId))
+            .returning({ id: Group.id, status: Group.status })
+
+        if (result.length === 0) throw new apiError(404, "Not Found", "No such group of this id is found")
+
+        await client.sAdd('groups:disqualified', String(parsedGroupId))
+
+        return result;
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;

@@ -41,11 +41,12 @@ export const Admin = pgTable('admin', {
     created_at: timestamp().defaultNow()
 })
 
+
 export const Group = pgTable('group', {
     id: serial().primaryKey(),
     name: varchar({length: 50}).notNull(),
     status: groupStatusEnum().default('active'),
-    points: smallint().default(20),     
+    points: smallint().default(25),     
     timeTaken: numeric({ precision: 5, scale: 2 }).default('0.00'),          // in minutes
     createdAt: timestamp().defaultNow(),
     maxLevelReached: levelEnum().default('0'),     
@@ -94,6 +95,8 @@ export const ThemeMessage = pgTable('theme_message', {
     message: text().notNull()
 })
 
+
+dont forget to 'generate' and 'migrate' your schema.ts before running the application
 
 
 // Generate — creates the SQL migration files from your schema changes. Just files, nothing applied to DB yet.
