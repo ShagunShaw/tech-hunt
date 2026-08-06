@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm"
 import { db } from "../drizzle/db"
-import { Admin, Group } from "../drizzle/schema"
+import { Admin, Group, GroupMember } from "../drizzle/schema"
 import { apiError } from "../utils/ApiError"
 import { GameConfig } from "../drizzle/schema";
 import client from "../redis.config";
+import { genreSchema } from "../validations/tokenUser.type";
+import * as z from "zod";
 
 
 export const getAdmins = async (status: 'approved' | 'pending') => {
@@ -181,6 +183,117 @@ export const disqualifyGroup = async (groupId: any) => {
         if (result.length === 0) throw new apiError(404, "Not Found", "No such group of this id is found")
 
         await client.sAdd('groups:disqualified', String(parsedGroupId))
+
+        return result;
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        throw new apiError(
+            500,
+            error.name || "InternalServerError",
+            error.message || "An unexpected error occurred"
+        );
+    }
+}
+
+export const createSpecialGroup = async (groupId: any, groupName: string) => {
+    try {
+        // Instead of requesting for the leftover partipants id from the frontend, we'll fetch those from the redis
+
+        let leftUsers = [];
+
+        const iterator = client.scanIterator({
+            MATCH: 'genre:*',
+            COUNT: 10        // Tells Redis to look at 10 keys per batch to remain non-blocking
+        });
+
+        for await (const key of iterator) {
+            const singleKey = key as unknown as string;
+            leftUsers.push(singleKey.replace("genre:", ""));
+        }
+
+        if (leftUsers.length === 0) throw new apiError(400, "No user left", "No user left in the redis whose group is yet to be formed")
+
+        let result: any[] = [];
+
+        if (leftUsers.length === 1) {
+            if (!groupId) throw new apiError(400, "Group Id not given", "For only 1 left member, you need to add it to an existing group and thus the group Id is required")
+
+            const parsedGroupId = Number(groupId.toLowerCase())
+            if (isNaN(parsedGroupId)) {
+                throw new apiError(400, "Invalid group ID", "Group ID must be a valid number")
+            }
+
+            const genre = await client.get(`genre:${leftUsers[0]}`)
+            const isValid = genreSchema.safeParse(genre)
+            if (!isValid.success) throw new apiError(500, "Genre Mismatch", "Provided genre does not match with any of the specified genres")
+
+            const member = await db.insert(GroupMember)
+                .values({ participantId: Number(leftUsers[0]), genre: isValid.data, groupId: parsedGroupId })
+                .returning({ id: GroupMember.id, groupId: GroupMember.groupId })
+
+            if (member.length === 0) throw new apiError(500, "Could not insert", `Something went wrong while adding the left member to the existing group id ${parsedGroupId}`)
+
+            if (!member[0]) throw new apiError(500, "Member not found", "Member record was not created properly")
+
+            await client.del(`genre:${leftUsers[0]}`)
+
+            result = await db.select({ groupId: Group.id, groupName: Group.name, themeAssigned: Group.themeAssigned })
+                .from(Group)
+                .where(eq(Group.id, member[0].groupId))
+
+            if (result.length === 0) throw new apiError(404, "Not Found", "No such group of the provided groupId is found")
+        } else if (leftUsers.length >= 4) {
+            throw new apiError(403, "Cannot Form Special Groups", `There are still ${leftUsers.length} members left to form a group out of which ${(leftUsers.length) / 4} groups can still be formed. First form those groups and then hit this route for grouping the left members (if any)`)
+        } else {
+            if (!groupName) throw new apiError(400, "Group Name missing", "Since there are only 2 or 3 member left to form th group, a group name is required!")
+
+            Properly assign this theme later
+            const themeAssigned = "Theme 1"
+            const genres = await Promise.all(leftUsers.map(id => client.get(`genre:${id}`)))
+            if (genres.some(g => g === null)) throw new apiError(500, "Genre Missing", "Genre of one/more then one candidate is missing, might be because they are already a part of any other group")
+            if (genres.some(g => !genreSchema.safeParse(g).success)) throw new apiError(500, "Genre Mismatch", "Provided genre of one/more than one candidate does not match with any of the specified genres")
+
+            // DB Transaction
+            result = await db.transaction(async (tx) => {
+
+                const result2 = await tx.insert(Group)
+                    .values({ name: groupName, themeAssigned })
+                    .returning({ id: Group.id });
+
+                if (result2.length === 0) {
+                    throw new apiError(500, "Something went wrong", "Something went wrong while creating the group")
+                }
+
+                const newGroupId = Number(result2[0]?.id);
+
+                if (leftUsers.length === 2) {
+                    await tx.insert(GroupMember).values([
+                        { participantId: Number(leftUsers[0]), genre: genres[0] as z.infer<typeof genreSchema>, groupId: newGroupId },
+                        { participantId: Number(leftUsers[1]), genre: genres[1] as z.infer<typeof genreSchema>, groupId: newGroupId },
+                    ]);
+                }
+                else if (leftUsers.length === 3) {
+                    await tx.insert(GroupMember).values([
+                        { participantId: Number(leftUsers[0]), genre: genres[0] as z.infer<typeof genreSchema>, groupId: newGroupId },
+                        { participantId: Number(leftUsers[1]), genre: genres[1] as z.infer<typeof genreSchema>, groupId: newGroupId },
+                        { participantId: Number(leftUsers[2]), genre: genres[2] as z.infer<typeof genreSchema>, groupId: newGroupId },
+                    ]);
+                }
+
+                return [{
+                    groupId: newGroupId,
+                    groupName,
+                    themeAssigned
+                }];
+            });
+
+            // Cleanup Redis records after successful transaction commit
+            const redisDeleteKeys = leftUsers.map(id => `genre:${id}`);
+            await client.del(redisDeleteKeys);
+        }
 
         return result;
     } catch (error: any) {

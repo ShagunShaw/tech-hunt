@@ -146,7 +146,30 @@ export const disqualifyGroup = async (req: any, res: Response) => {
         const result = await superAdminService.disqualifyGroup(groupId);
 
         return res.status(200)
-                  .json(new apiResponse(200, result, "Group has been disqualified successfully"))
+            .json(new apiResponse(200, result, "Group has been disqualified successfully"))
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            return res.status(error.status).json(error);
+        }
+
+        const status = error.status ?? 500;
+        const errName = error.errName ?? error.name ?? "InternalServerError";
+        const errMessage = error.errMessage ?? error.message ?? "An unexpected error occurred";
+
+        return res.status(status).json(
+            new apiError(status, errName, errMessage)
+        );
+    }
+}
+
+export const createSpecialGroup = async (req: any, res: Response) => {
+    try {
+        const { groupId, groupName } = req.body        // any of them can be 'undefined' if more than 1 members are left to form the group or not, accordingly
+        
+        const result = await superAdminService.createSpecialGroup(groupId, groupName);
+
+        return res.status(201)
+            .json(new apiResponse(201, result, "Left Member/s added successfully to a group"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);
