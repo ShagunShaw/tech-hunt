@@ -4,6 +4,10 @@ Ans) This is the classic industry problem and the solution is Super Admin is not
 Q)   Why not take 'googleId' as primary key instead of 'id' ?
 Ans) Due to Performance: 'id' is a serial integer — small, fast to index and join on. 'googleId' is a 21 character string — slower for joins, especially when your group_members table references it as foreign key.
 
+Q) Why we are allowing group/genre creation even after my game has started running?
+Ans) I am doing this because, as when the game is running are participants are busy playing the game, what will the volunteers/admins do for that 2.5 hours + its a treasure hunt game so everyone will love to play. So definately in the meantime volunteers/admin will also want to play the game and so we will let them do so. They just had to pick up unique genres for a group, register those genres, create a group and then can play the game. 
+Also before they can play the game, they had to 1st register them as participants. They can use the same email (with which they had register for the admin role) as well, as there is no problem in having one common email in two different independent tables (Participant & Admin table).
+Also during the result time, Super-admin will manually ignore the groups of the volunterrs/admins, to rank only the participant groups.
 
 *  If you need to check whether rows were affected after insert, update or delete, always use  .returning()
 *  Searching an indexed column across many rows is faster than scanning an array in one row. This is literally why relational databases were invented. Indexes on foreign keys are one of PostgreSQL's core strengths.  And that is the reason why we chose group_id as foreign key in my group_members table instead of an array of group_members_id in our groups table. With group_id in members table — PostgreSQL puts an index on that foreign key. Finding all members of a group is an instant indexed lookup.
