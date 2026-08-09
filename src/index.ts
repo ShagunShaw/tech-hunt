@@ -11,6 +11,7 @@ import SuperAdminRouter from "./routes/super-admin.routes"
 import GroupRouter from "./routes/group.routes"
 import ThemeRouter from "./routes/theme.routes"
 import QuestionRouter from "./routes/question.routes"
+import GameRouter from "./routes/game.routes"
 
 await client.connect();
 
@@ -31,6 +32,7 @@ app.use("/api/v1/super-admin", SuperAdminRouter)
 app.use("/api/v1/group", GroupRouter)
 app.use("/api/v1/theme", ThemeRouter)
 app.use("/api/v1/question", QuestionRouter)
+app.use("/api/v1/game", GameRouter)
 
 
 app.get("/health", (req, res) => {

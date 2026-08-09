@@ -11,7 +11,16 @@ export const POINTS = {
     max: 80             // can only be achieved when all stages are passed without using any hint at any stage
 }
 
-Give actual values to these themes
+export const EXTRA_POINTS = {
+    1: 5,   
+    2: 7,  
+    3: 10,  
+    4: 12,
+    5: 15,
+    6: 18
+}
+
+Give actual values to these themes; and make sure there should be no gap in between in any theme value, like 'Harry Porter' will become 'HarryPorter', and try to keep theme values short only, so that redis mei agr wo values store krna pde to wo krne mei jyada space na le
 export const THEMES = ['Theme 1', 'Theme 2', 'Theme 3', 'Theme 4', 'Theme 5', 'Theme 6']
 
 export const TECH_DOMAINS = {

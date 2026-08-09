@@ -2,9 +2,6 @@ import { Router } from 'express'
 import * as group from '../controller/group.controller'
 import { verifyJWT } from '../middlewares/verifyJWT';
 import { authorize } from '../middlewares/verifyRole'
-import client from '../redis.config';
-import type { Response, NextFunction } from 'express';
-import { apiError } from '../utils/ApiError';
 import { isRunning } from '../middlewares/verifyStartStatus';
 
 const router: Router= Router()

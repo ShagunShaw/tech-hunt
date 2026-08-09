@@ -80,6 +80,8 @@ export const joinGroup = async (groupId: string, userId: number) => {
             const arr = await client.sMembers(`group:member:${normalizedGroupId}`)
 
             evenly distribute themes across all groups(using round robin algorithm(a good way of doing this is that we take the group number like 1st group, 2nd group like this, that is being stored in redis and apply mod 6 to the group number, and then assign theme[at that number]to that group, and increase the group number count in redis by 1))
+
+            also in the function of assigning themes to a group, after the theme had been assigned, make sure to add a value in redis as `theme:${groupId}` = <assigned_theme_id>, so that every time a QR is scanned, we can ensure a group is scanned the QR of their theme only, not of any others.
             const themeAssigned = 'Theme 1'
             const genres = await Promise.all(arr.map(id => client.get(`genre:${id}`)))
             if (genres.some(g => g === null)) throw new apiError(500, "Genre Missing", "Genre of one/more then one candidate is missing, might be because they are already a part of any other group")
