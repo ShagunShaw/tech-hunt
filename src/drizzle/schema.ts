@@ -4,7 +4,7 @@ import { it } from "zod/locales"
 export const roleEnum= pgEnum('role', ['admin', 'superAdmin'])
 export const yearEnum= pgEnum('year', ['1st', '2nd', '3rd', '4th', '5th'])
 export const statusEnum= pgEnum('status', ['pending', 'approved', 'rejected'])
-export const groupStatusEnum= pgEnum('groupStatus', ['active', 'disqualified', 'aborted'])
+export const groupStatusEnum= pgEnum('groupStatus', ['active', 'disqualified', 'aborted', 'cleared'])
 export const genreEnum= pgEnum('genre', ['Earth', 'Stars', 'Sun', 'Sky'])
 export const domainEnum= pgEnum('domain', ['DSA', 'Web', 'AI/ML', 'Cybersecurity', 'Cloud&Devops', 'BlockChain'])
 

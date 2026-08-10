@@ -39,14 +39,12 @@ router.get("/startQR/:groupId", isRunning, verifyJWT, authorize('participant'), 
 
 router.get("/QR/:groupId", isRunning, verifyJWT, authorize('participant'), gameController.scanQR)
 
+router.get("/hints/:groupId", isRunning, verifyJWT, authorize('participant'), gameController.useHints)
 
-(I think this part is purely frontend) Solve the question and match its answer from the given array of answers, if succeded, show the message, else show "Wrong Answer"; there is no limit in attempting to answers, but there is a limit to access to hints
+// (FRONTEND PART) Solve the question and match its answer from the given array of answers, if succeded, then only navigate it to the 'points_assigning' route, else not; there is no limit in attempting to answers, but there is a limit to access to hints
 
+give points to a group (student can attempt multiple answer for the given question, there is no limit to that. When the answer matches with any of the value of the answer array, we will call this backend route and update the points, maxlevelReached, etc.(if any other field/s also need to be updated, check that) of that team. After updating the values, we will return the message of the next level as response). Add all three midllwares here also;
+router.patch("/points/:groupId", isRunning, verifyJWT, authorize('participant'), gameController.updatePoints)
 
-give points to a group (student can attempt multiple answer for the given question, there is no limit to that. When the answer matches with any of the value of the answer array, we will call this backend route and update the points, maxlevelReached, etc.(if any other field/s also need to be updated, check that) of that team. After updating the values, we will return the message of the next level as response). Add all three midllwares here also
-
-
-Use hints (of course limited, depending upon the points they had)
-router.get("/hints", isRunning, verifyJWT, authorize('participant'), gameController.useHints)
 
 export default router;

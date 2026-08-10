@@ -1,12 +1,12 @@
 export const POINTS = {
     initial: 25,
     levels: [
-        { pass: 3, hint: -2 },      // S1
-        { pass: 5, hint: -4 },      // S2
-        { pass: 8, hint: -5 },      // S3
-        { pass: 10, hint: -8 },     // S4
-        { pass: 13, hint: -10 },    // S5
-        { pass: 16, hint: -13 },    // S6
+        { pass: 3, hint: 2 },      // S1
+        { pass: 5, hint: 4 },      // S2
+        { pass: 8, hint: 5 },      // S3
+        { pass: 10, hint: 8 },     // S4
+        { pass: 13, hint: 10 },    // S5
+        { pass: 16, hint: 13 },    // S6
     ],
     max: 80             // can only be achieved when all stages are passed without using any hint at any stage
 }
