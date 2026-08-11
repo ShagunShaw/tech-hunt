@@ -64,6 +64,8 @@ export const scanQR = async (req: Request, res: Response) => {
 
         if (!themeId || !level) throw new apiError(400, "Required values not found", "Either themeId or level is missing in request's body")
 
+        if (!groupId || typeof groupId !== 'string') throw new apiError(400, "Invalid group ID", "Group ID must be a valid string")
+
         const isExited = (await client.sIsMember('groups:aborted', groupId)) || (await client.sIsMember('groups:disqualified', groupId))
         if (isExited) throw new apiError(403, "Forbidden", "You cannot access this route as you had either aborted or had been disqualified from the game")
 
@@ -193,7 +195,6 @@ export const useHints = async (req: Request, res: Response) => {
             throw new apiError(403, "Cannot Access", `Cannot access the hint of this level as you are currently on level ${maxLevelReached}`)
         }
 
-        `hints:${groupId}:${maxLevelReached + 1}`  clear this value in the points assigning controller
         const maxHintsUsed = await client.get(`hints:${groupId}:${parsedLevel}`);
 
         let result = ""
@@ -292,25 +293,114 @@ export const updatePoints = async (req: Request, res: Response) => {
         }
 
         let result: any = []
-        if(newLevel.data === '6') {
-            also add time taken here (not required in else part)
+        let message: any = ""
+        if (newLevel.data === '6') {
+            const startTime = Number(await client.get('game:startTime'))
+            const currentTime = new Date().getTime();
+            const timeTaken = currentTime - startTime;
 
             result = await db
-            .update(Group)
-            .set({
-                points: sql`${Group.points} + ${pointsToAdd}`, 
-                maxLevelReached: newLevel.data,
-                status: 'cleared'
-            })
-            .where(eq(Group.id, parsedGroupId))
-            .returning({ status: Group.status, points: Group.points, timeTaken: Group.timeTaken, maxLevelReached: Group.maxLevelReached})
-        }
-        else 
-        {
+                .update(Group)
+                .set({
+                    points: sql`${Group.points} + ${pointsToAdd}`,
+                    maxLevelReached: newLevel.data,
+                    status: 'cleared',
+                    timeTaken: (timeTaken / 60000).toFixed(2)          // 1 minute = 60,000 miliseconds
+                })
+                .where(eq(Group.id, parsedGroupId))
+                .returning({ id: Group.id, status: Group.status, points: Group.points, timeTaken: Group.timeTaken, maxLevelReached: Group.maxLevelReached })
 
+            if (result.length == 0) throw new apiError(404, "Not Found", "So such group with this groupId is found!")
+
+            message = "Congratulations, You had successfully cleared all the levels. Now naviagte back to the Game Arena and wait for the results"
+        }
+        else {
+            const { result_new, message_new } = await db.transaction(async (tx) => {
+                // 1. Update Group Points & Max Level
+                const updatedGroups = await tx
+                    .update(Group)
+                    .set({
+                        points: sql`${Group.points} + ${pointsToAdd}`,
+                        maxLevelReached: newLevel.data,
+                    })
+                    .where(eq(Group.id, parsedGroupId))
+                    .returning({
+                        id: Group.id,
+                        points: Group.points,
+                        maxLevelReached: Group.maxLevelReached,
+                    });
+
+                if (updatedGroups.length === 0) {
+                    throw new apiError(404, "Not Found", "No such group with this groupId was found!");
+                }
+
+                // 2. Redis Operations (Theme Retrieval)
+                const assignedThemeId = await client.get(`theme:${groupId}`);
+
+                if (!assignedThemeId) {
+                    throw new apiError(
+                        500,
+                        "Redis Fetching Error",
+                        "Could not fetch the assigned theme for this group"
+                    );
+                }
+
+                let finalMessage = await client.get(
+                    `theme:${assignedThemeId}:message:${newLevel.data + 1}`
+                );
+
+                // 3. Fallback to DB query inside transaction if cache misses
+                if (!finalMessage) {
+                    const parsedThemeId = Number(assignedThemeId);
+
+                    if (isNaN(parsedThemeId)) {
+                        throw new apiError(400, "Invalid theme ID", "Theme ID must be a valid number");
+                    }
+
+                    const themeResults = await tx
+                        .select({
+                            message: ThemeMessage.message,
+                        })
+                        .from(Theme)
+                        .innerJoin(
+                            ThemeMessage,
+                            eq(
+                                ThemeMessage.id,
+                                sql`${Theme.messagesOrder}[${newLevel.data + 1}]`
+                            )
+                        )
+                        .where(eq(Theme.id, parsedThemeId));
+
+                    if (themeResults.length === 0) {
+                        throw new apiError(404, "Not Found", "No such theme id was found in the db");
+                    }
+
+                    finalMessage = themeResults[0]?.message  ||  "";
+                    if(finalMessage === "")     throw new apiError(500, "Something Went Wrong", "Although 'themeResults' had been fetched from the db, there is some error in getting the 'message' from it")
+
+                    // Cache the retrieved message back into Redis
+                    await client.set(
+                        `theme:${assignedThemeId}:message:${newLevel.data + 1}`,
+                        finalMessage
+                    );
+                }
+
+                // Return values out of the transaction
+                return {
+                    result_new: updatedGroups,
+                    message_new: finalMessage,
+                };
+            });
+
+            result = result_new;
+            message = message_new;
         }
 
-        agr last question h, toh message = "Congratulations,...." 
+        const finalResult = [{ result, message }]
+        await client.del(`hints:${groupId}:${maxLevelReached + 1}`)
+        await client.set(`hints:${groupId}:${maxLevelReached + 1}`)     // dekho isme ky key-value hoga
+
+        return res.status(200).json(new apiResponse(200, finalResult, "Points updated successfully. Take the next message provided and move ahead"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);
@@ -327,4 +417,4 @@ export const updatePoints = async (req: Request, res: Response) => {
 }
 
 
-redis.set(`maxLevel:${groupId}`, <maxLevelReached>)         // use this and add it in start qr controller
+redis.set(`maxLevel:${groupId}`, <maxLevelReached>)         // use this and add it in start qr controller and point updating controller too
