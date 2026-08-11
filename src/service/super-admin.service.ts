@@ -6,6 +6,7 @@ import { GameConfig } from "../drizzle/schema";
 import client from "../redis.config";
 import { genreSchema } from "../validations/tokenUser.type";
 import * as z from "zod";
+import { EXTRA_POINTS } from "../constants/point.constant";
 
 
 export const getAdmins = async (status: 'approved' | 'pending') => {
@@ -309,34 +310,40 @@ export const createSpecialGroup = async (groupId: any, groupName: string) => {
     }
 }
 
-export const allocateExtraPoints = async (extraPoints: number) => {
+export const allocateExtraPointsByLevel = async () => {
     try {
-        if (isNaN(extraPoints) || extraPoints <= 0) {
-            throw new apiError(400, "Invalid points value", "extraPoints must be a valid positive number");
-        }
+        const caseChunks = Object.entries(EXTRA_POINTS).map(
+            ([level, points]) => sql`WHEN ${Group.maxLevelReached} = ${level} THEN ${points}`
+        );
 
-        Make sure to add logs in this part also
+        const pointsToAddSql = sql`CASE ${sql.join(caseChunks, sql` `)} ELSE 0 END`;
 
-        const result = await db.transaction(async (tx) => {     // 'result' will be [{id: <groupId1>}, {id: <groupId2>}, {id: <groupId3>}, ....]
+        const result = await db.transaction(async (tx) => {
             const updated = await tx
                 .update(Group)
                 .set({
-                    points: sql`${Group.points} + ${extraPoints}`,
+                    points: sql`${Group.points} + ${pointsToAddSql}`,
                 })
-                .where(inArray(Group.status, ['active', 'cleared']))
-                .returning({ id: Group.id }); 
+                .where(inArray(Group.status, ['active']))
+                .returning({
+                    id: Group.id,
+                    maxLevelReached: Group.maxLevelReached,
+                    newPoints: Group.points
+                });
 
             if (updated.length === 0) {
-                throw new apiError(444, "No Groups Updated", "No groups currently match 'active' or 'cleared' status");
+                throw new apiError(
+                    404,
+                    "No Groups Updated",
+                    "No groups currently match 'active' or 'cleared' status"
+                );
             }
 
             return updated;
         });
 
         return result;
-    }
-    catch (error: any) 
-    {
+    } catch (error: any) {
         if (error instanceof apiError) {
             throw error;
         }
@@ -344,7 +351,7 @@ export const allocateExtraPoints = async (extraPoints: number) => {
         throw new apiError(
             500,
             error.name || "InternalServerError",
-            error.message || "An unexpected error occurred"
+            error.message || "An unexpected error occurred during points allocation"
         );
     }
-}
+};

@@ -20,7 +20,6 @@ router.patch("/startGame", verifyJWT, authorize('super-admin'), superAdminContro
 For auto-finish, we will use Bull Queue . Will Schedule it to run at startTime + duration, set isStarted = false automatically in the db, to auto-finish our game
 router.patch("/endGame", verifyJWT, authorize('super-admin'), isRunning, superAdminController.endGame)
 
-allocate extra points to each team depending upon the level reached  (make changes, you did it wrong)
 router.patch("/extraPoints", verifyJWT, authorize('super-admin'), isRunning, superAdminController.allocateExtraPoints)
 
 router.patch("/disqualify/:groupId", verifyJWT, authorize('super-admin'), superAdminController.disqualifyGroup)

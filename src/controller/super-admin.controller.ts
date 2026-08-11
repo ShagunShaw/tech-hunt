@@ -186,11 +186,9 @@ export const createSpecialGroup = async (req: any, res: Response) => {
 
 export const allocateExtraPoints = async (req: any, res: Response) => {
     try {
-        const extraPoints = Number(req.body.extraPoints);
+        const result = await superAdminService.allocateExtraPointsByLevel();
 
-        const result = await superAdminService.allocateExtraPoints(extraPoints)
-
-        return res.status(200).json(new apiResponse(200, result, "Extra Points allocated successfully to all groups"))
+        return res.status(200).json(new apiResponse(200, result, "Extra Points allocated successfully to all groups depending on the levels they had reached"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);
