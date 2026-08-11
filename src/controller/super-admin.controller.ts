@@ -3,7 +3,6 @@ import { apiError } from "../utils/ApiError";
 import * as superAdminService from "../service/super-admin.service"
 import { apiResponse } from "../utils/ApiResponse";
 import { statusSchema } from "../validations/tokenUser.type"
-import { db } from "../drizzle/db";
 
 export const getPendingAdmins = async (req: Request, res: Response) => {
     try {
@@ -165,11 +164,33 @@ export const disqualifyGroup = async (req: any, res: Response) => {
 export const createSpecialGroup = async (req: any, res: Response) => {
     try {
         const { groupId, groupName } = req.body        // any of them can be 'undefined' if more than 1 members are left to form the group or not, accordingly
-        
+
         const result = await superAdminService.createSpecialGroup(groupId, groupName);
 
         return res.status(201)
             .json(new apiResponse(201, result, "Left Member/s added successfully to a group"))
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            return res.status(error.status).json(error);
+        }
+
+        const status = error.status ?? 500;
+        const errName = error.errName ?? error.name ?? "InternalServerError";
+        const errMessage = error.errMessage ?? error.message ?? "An unexpected error occurred";
+
+        return res.status(status).json(
+            new apiError(status, errName, errMessage)
+        );
+    }
+}
+
+export const allocateExtraPoints = async (req: any, res: Response) => {
+    try {
+        const extraPoints = Number(req.body.extraPoints);
+
+        const result = await superAdminService.allocateExtraPoints(extraPoints)
+
+        return res.status(200).json(new apiResponse(200, result, "Extra Points allocated successfully to all groups"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);

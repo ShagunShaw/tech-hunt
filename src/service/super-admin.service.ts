@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, inArray, sql } from "drizzle-orm"
 import { db } from "../drizzle/db"
 import { Admin, Group, GroupMember } from "../drizzle/schema"
 import { apiError } from "../utils/ApiError"
@@ -297,6 +297,46 @@ export const createSpecialGroup = async (groupId: any, groupName: string) => {
 
         return result;
     } catch (error: any) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        throw new apiError(
+            500,
+            error.name || "InternalServerError",
+            error.message || "An unexpected error occurred"
+        );
+    }
+}
+
+export const allocateExtraPoints = async (extraPoints: number) => {
+    try {
+        if (isNaN(extraPoints) || extraPoints <= 0) {
+            throw new apiError(400, "Invalid points value", "extraPoints must be a valid positive number");
+        }
+
+        Make sure to add logs in this part also
+
+        const result = await db.transaction(async (tx) => {     // 'result' will be [{id: <groupId1>}, {id: <groupId2>}, {id: <groupId3>}, ....]
+            const updated = await tx
+                .update(Group)
+                .set({
+                    points: sql`${Group.points} + ${extraPoints}`,
+                })
+                .where(inArray(Group.status, ['active', 'cleared']))
+                .returning({ id: Group.id }); 
+
+            if (updated.length === 0) {
+                throw new apiError(444, "No Groups Updated", "No groups currently match 'active' or 'cleared' status");
+            }
+
+            return updated;
+        });
+
+        return result;
+    }
+    catch (error: any) 
+    {
         if (error instanceof apiError) {
             throw error;
         }

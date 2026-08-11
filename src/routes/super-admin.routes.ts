@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { verifyJWT } from '../middlewares/verifyJWT'
 import { authorize } from '../middlewares/verifyRole'
 import * as superAdminController from "../controller/super-admin.controller"
+import { isRunning } from '../middlewares/verifyStartStatus'
 
 const router: Router = Router()
 
@@ -17,9 +18,10 @@ router.patch("/startGame", verifyJWT, authorize('super-admin'), superAdminContro
 
 // finish the game (we have options for both auto-finish and explicit finish by the super-admin before the game duration ends, in this route we are only handling the explicit finish by super-admin)
 For auto-finish, we will use Bull Queue . Will Schedule it to run at startTime + duration, set isStarted = false automatically in the db, to auto-finish our game
-router.patch("/endGame", verifyJWT, authorize('super-admin'), superAdminController.endGame)
+router.patch("/endGame", verifyJWT, authorize('super-admin'), isRunning, superAdminController.endGame)
 
-allocate extra points to each team depending upon the level reached
+allocate extra points to each team depending upon the level reached  (make changes, you did it wrong)
+router.patch("/extraPoints", verifyJWT, authorize('super-admin'), isRunning, superAdminController.allocateExtraPoints)
 
 router.patch("/disqualify/:groupId", verifyJWT, authorize('super-admin'), superAdminController.disqualifyGroup)
 
