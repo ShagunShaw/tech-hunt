@@ -186,6 +186,8 @@ export const createSpecialGroup = async (req: any, res: Response) => {
 
 export const allocateExtraPoints = async (req: any, res: Response) => {
     try {
+        // no need to pass anything in req.body or req.param here as the Super-Admin will simply click the "Allocate Extra Points" button in the frontend, then it will be navigated to the backend route (after re-confirming using windows.confirm() in frontend) and then allocate extra points to all groups depending upon their max level reached.
+
         const result = await superAdminService.allocateExtraPointsByLevel();
 
         return res.status(200).json(new apiResponse(200, result, "Extra Points allocated successfully to all groups depending on the levels they had reached"))

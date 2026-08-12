@@ -312,6 +312,7 @@ export const createSpecialGroup = async (groupId: any, groupName: string) => {
 
 export const allocateExtraPointsByLevel = async () => {
     try {
+        // This 'caseChunk' will help us to allocate extra points to each groups depending upon the max level they had reached so far 
         const caseChunks = Object.entries(EXTRA_POINTS).map(
             ([level, points]) => sql`WHEN ${Group.maxLevelReached} = ${level} THEN ${points}`
         );
