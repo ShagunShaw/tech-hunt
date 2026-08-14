@@ -20,9 +20,6 @@ export const EXTRA_POINTS = {
     5: 18
 }
 
-Give actual values to these themes; and make sure there should be no gap in between in any theme value, like 'Harry Porter' will become 'HarryPorter', and try to keep theme values short only, so that redis mei agr wo values store krna pde to wo krne mei jyada space na le
-export const THEMES = ['Theme 1', 'Theme 2', 'Theme 3', 'Theme 4', 'Theme 5', 'Theme 6']
-
 export const TECH_DOMAINS = {
     0: 'DSA',
     1: 'Web',

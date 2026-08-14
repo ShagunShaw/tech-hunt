@@ -8,9 +8,6 @@ export const groupStatusEnum= pgEnum('groupStatus', ['active', 'disqualified', '
 export const genreEnum= pgEnum('genre', ['Earth', 'Stars', 'Sun', 'Sky'])
 export const domainEnum= pgEnum('domain', ['DSA', 'Web', 'AI/ML', 'Cybersecurity', 'Cloud&Devops', 'BlockChain'])
 
-Assign proper theme values to this 'theme' enum. (Shyd yh naa lge, coz now instead of hard-coding the themes we are letting admins only to create the theme, so phle routes and controllers bnn jane do, then decide isko rkhna h ki ni)
-export const themeEnum= pgEnum('theme', ['Theme 1', 'Theme 2', 'Theme 3', 'Theme 4', 'Theme 5', 'Theme 6'])
-
 // pgEnum expects string values for enum members
 export const levelEnum= pgEnum('level', ['0', '1', '2', '3', '4', '5', '6'])        // 6 is my final stage, i.e. when a group reached 6th level that means their all levels are cleared and they will be naviagated back to the game arena i.e the auditorium, by a message
 
@@ -50,7 +47,7 @@ export const Group = pgTable('group', {
     timeTaken: numeric({ precision: 5, scale: 2 }).default('0.00'),          // in minutes
     createdAt: timestamp().defaultNow(),
     maxLevelReached: levelEnum().default('0'),     
-    themeAssigned: themeEnum().notNull()            
+    themeAssigned: varchar({length: 50}).notNull()            
 })
 
 // See the process of assigning genre to each member in notes.txt file
@@ -79,6 +76,7 @@ export const Question = pgTable('question', {
     hints: text().array().notNull()     // can add as many hints as the admin wants for a question
 })
 
+Dont let admin create themes. Don't remove the table either. Just seed the 6 themes directly in DB once — like you did for super admin. (dont forget this); Also the theme you will create should match the theme you have defined here in themeEnum
 export const Theme = pgTable('theme', {
     id: serial().primaryKey(),
     name: varchar({length: 50}).notNull().unique(),
