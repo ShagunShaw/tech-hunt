@@ -5,10 +5,66 @@ import type { genreSchema } from '../validations/tokenUser.type'
 import client from '../redis.config'
 import { apiError } from '../utils/ApiError'
 import { db } from "../drizzle/db"
-import { Group, GroupMember } from '../drizzle/schema'
+import { Group, GroupMember, Theme } from '../drizzle/schema'
 import { inArray, eq, and } from 'drizzle-orm'
 
 type GenreType = z.infer<typeof genreSchema>;
+
+const RoundRobin = async () => {
+    try {
+
+        // Atomically increment the counter (starts at 1 on first call)
+        const currentCount = await client.incr('theme:count');      // the 'incr' instead of 'get' wil help us prevent the race condition in our 'round robin' case 
+
+        const themeIndex = ((currentCount - 1) % 6) + 1;
+
+        let themeName = await client.get(`theme:number:${themeIndex}`);
+        let index = await client.get(`theme:index:${themeIndex}`)
+
+        if (!themeName ||  !index) {
+            const themes = await db.select({ name: Theme.name, id: Theme.id }).from(Theme);
+
+            if (!themes || themes.length === 0) {
+                throw new apiError(500, "Unable to fetch Themes", "Problem fetching themes from DB");
+            }
+
+            // Cache all themes in Redis concurrently
+            const cachePromises: Promise<any>[] = [];
+            for (let i = 0; i < themes.length; i++) {
+                if (typeof themes[i]?.name === 'string' && themes[i]?.id) {
+                    While handling Game End part(both by auto and super-admin), make sure to add a feature to remove all these below values also from redis, or it will stay here forever
+                    
+                    cachePromises.push(client.set(`theme:number:${i + 1}`, String(themes[i]?.name)));
+                    cachePromises.push(client.set(`theme:index:${i + 1}`, String(themes[i]?.id)));
+                }
+            }
+            await Promise.all(cachePromises);
+
+            themeName = await client.get(`theme:number:${themeIndex}`);
+            index = await client.get(`theme:index:${themeIndex}`);
+
+            if (!themeName) {
+                throw new apiError(404, "Not Found", `Theme for position ${themeIndex} is missing`);
+            }
+
+            if (!index) {
+                throw new apiError(404, "Not Found", `Theme index for position ${themeIndex} is missing`);
+            }
+        }
+
+        return {themeName, index};
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        throw new apiError(
+            500,
+            error.name || "InternalServerError",
+            error.message || "An unexpected error occurred"
+        );
+    }
+}
 
 export const registerGenre = async (genre: GenreType, userId: number) => {
     try {
@@ -79,12 +135,7 @@ export const joinGroup = async (groupId: string, userId: number) => {
         {
             const arr = await client.sMembers(`group:member:${normalizedGroupId}`)
 
-            To distribute the themes across different groups, we need to first fetch all the 'themes Name' (and not 'themeId') from the db store it in redis, and then allocate it among the groups
-
-            evenly distribute themes across all groups(using round robin algorithm(a good way of doing this is that we take the group number like 1st group, 2nd group like this, that is being stored in redis and apply mod 6 to the group number, and then assign theme[at that number]to that group, and increase the group number count in redis by 1)).
-
-            also in the function of assigning themes to a group, after the theme had been assigned, make sure to add a value in redis as `theme:${groupId}` = <assigned_theme_id>, so that every time a QR is scanned, we can ensure a group is scanned the QR of their theme only, not of any others.
-            const themeAssigned = 'Theme 1'
+            const themeAssigned = await RoundRobin();
             const genres = await Promise.all(arr.map(id => client.get(`genre:${id}`)))
             if (genres.some(g => g === null)) throw new apiError(500, "Genre Missing", "Genre of one/more then one candidate is missing, might be because they are already a part of any other group")
 
@@ -97,7 +148,7 @@ export const joinGroup = async (groupId: string, userId: number) => {
             const responseData = await db.transaction(async (tx) => {
 
                 const result = await tx.insert(Group)
-                    .values({ name: groupName, themeAssigned })
+                    .values({ name: groupName, themeAssigned: themeAssigned.themeName })
                     .returning({ id: Group.id });
 
                 if (result.length === 0) {
@@ -105,6 +156,7 @@ export const joinGroup = async (groupId: string, userId: number) => {
                 }
 
                 const newGroupId = Number(result[0]?.id);
+                await client.set(`theme:${newGroupId}`, String(themeAssigned.index))
 
                 await tx.insert(GroupMember).values([
                     { participantId: Number(arr[0]), genre: genres[0], groupId: newGroupId },
@@ -161,11 +213,11 @@ export const abortGroup = async (userId: number, groupId: number) => {
             )
             .returning({ id: Group.id })
 
-        if (result.length == 0) return { success: false }   
+        if (result.length == 0) return { success: false }
         else {
             await client.sAdd('groups:aborted', String(groupId))
             return { success: true }
-        } 
+        }
 
     } catch (error: any) {
         if (error instanceof apiError) {
