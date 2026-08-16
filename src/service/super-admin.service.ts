@@ -9,6 +9,10 @@ import * as z from "zod";
 import { EXTRA_POINTS } from "../constants/point.constant";
 
 
+const assignQuestions = async () => {       // assign a proper name
+    
+}
+
 export const getAdmins = async (status: 'approved' | 'pending') => {
     try {
         const admins = await db.query.Admin.findMany({
