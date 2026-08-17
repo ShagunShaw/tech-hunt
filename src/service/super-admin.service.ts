@@ -1,6 +1,6 @@
 import { eq, inArray, sql } from "drizzle-orm"
 import { db } from "../drizzle/db"
-import { Admin, Group, GroupMember } from "../drizzle/schema"
+import { Admin, Group, GroupMember, Question } from "../drizzle/schema"
 import { apiError } from "../utils/ApiError"
 import { GameConfig } from "../drizzle/schema";
 import client from "../redis.config";
@@ -10,7 +10,21 @@ import { EXTRA_POINTS } from "../constants/point.constant";
 
 
 const assignQuestions = async () => {       // assign a proper name
-    
+    try {
+        const dsa = await db.select({ id: Question.id })
+                            .from(Question)
+                            .where(eq(Question.domain, 'DSA'))
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        throw new apiError(
+            500,
+            error.name || "InternalServerError",
+            error.message || "An unexpected error occurred"
+        );
+    }
 }
 
 export const getAdmins = async (status: 'approved' | 'pending') => {
