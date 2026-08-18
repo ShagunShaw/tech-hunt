@@ -8,7 +8,7 @@ const router: Router = Router()
 
 router.get('/pendingAdmin', verifyJWT, authorize('super-admin'), superAdminController.getPendingAdmins)
 
-router.patch("/:adminId/manage", verifyJWT, authorize('super-admin'), superAdminController.manageApproval)
+router.patch("/manage/:adminId", verifyJWT, authorize('super-admin'), superAdminController.manageApproval)
 
 router.get("/admins", verifyJWT, authorize('super-admin', 'admin'), superAdminController.getApprovedAdmins)       // list of all approved admins
 

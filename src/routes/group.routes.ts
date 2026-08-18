@@ -22,4 +22,7 @@ router.post('/create', verifyJWT, authorize('participant'), group.createGroup)
 // join group by other members
 router.post('/join', verifyJWT, authorize('participant'), group.joinGroup)
 
+// For this, our route will be: http://localhost:3000/api/v1/group/?page=<page_value>&limit=<limit_value>
+router.get('/', verifyJWT, authorize('super-admin'), group.getAllGroups)
+
 export default router;

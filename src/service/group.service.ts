@@ -21,7 +21,7 @@ const RoundRobin = async () => {
         let themeName = await client.get(`theme:number:${themeIndex}`);
         let index = await client.get(`theme:index:${themeIndex}`)
 
-        if (!themeName ||  !index) {
+        if (!themeName || !index) {
             const themes = await db.select({ name: Theme.name, id: Theme.id }).from(Theme);
 
             if (!themes || themes.length === 0) {
@@ -32,8 +32,8 @@ const RoundRobin = async () => {
             const cachePromises: Promise<any>[] = [];
             for (let i = 0; i < themes.length; i++) {
                 if (typeof themes[i]?.name === 'string' && themes[i]?.id) {
-                    While handling Game End part(both by auto and super-admin), make sure to add a feature to remove all these below values also from redis, or it will stay here forever
-                    
+                    While handling Game End part(both by auto and super- admin), make sure to add a feature to remove all these below values also from redis, or it will stay here forever
+
                     cachePromises.push(client.set(`theme:number:${i + 1}`, String(themes[i]?.name)));
                     cachePromises.push(client.set(`theme:index:${i + 1}`, String(themes[i]?.id)));
                 }
@@ -52,7 +52,7 @@ const RoundRobin = async () => {
             }
         }
 
-        return {themeName, index};
+        return { themeName, index };
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;
@@ -219,6 +219,35 @@ export const abortGroup = async (userId: number, groupId: number) => {
             return { success: true }
         }
 
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        throw new apiError(
+            500,
+            error.name || "InternalServerError",
+            error.message || "An unexpected error occurred"
+        );
+    }
+}
+
+export const getAllGroups = async (page: any, limit: any) => {
+    try {
+        if (!page || !limit) throw new apiError(422, "Invalid URL format", "'page' and 'limit' is missing in route")
+
+        const page_value = Number(page) || 1
+        const limit_value = Number(limit) || 10
+        const offset = (page_value - 1) * limit_value
+
+        const result = await db.select()
+            .from(Group)
+            .limit(limit_value)
+            .offset(offset)
+
+        const finalResult = { data: result, pagination: { page: page_value, limit: limit_value, total: result.length } }
+
+        return finalResult;
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;

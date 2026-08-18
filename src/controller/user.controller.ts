@@ -37,6 +37,7 @@ export const googleParticipantCallback = async (req: Request, res: Response) => 
     }
 }
 
+// For now, we will let all candidates to register and play the game (on the day of the game), no filtering among them on basis of First-Come-First-Serve; i.e. if 500 candidates registered for the game, we will let all 500 play the game
 export const partcipantRegister = async (req: Request, res: Response) => {
     try {
         const { phone, college, department, year } = req.body

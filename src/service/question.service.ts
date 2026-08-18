@@ -129,6 +129,7 @@ export const getAllQuestion = async (page: any, domain: any, limit: any) => {
     try {
         if (!page || !limit) throw new apiError(422, "Invalid URL format", "'domain' is optional, but 'page' and 'limit' is compulsory")
 
+        // Applying Pagination
         const page_value = Number(page) || 1
         const limit_value = Number(limit) || 10
         const offset = (page_value - 1) * limit_value       // offset tells PostgreSQL — "skip (page_value - 1) records, then give me limit_value records"

@@ -105,3 +105,28 @@ export const abort = async (req: any, res: Response) => {
         );
     }
 }
+
+Also check participant register krne k baad, unko directly approve krr de rhe h ky, ki super-admin unko approve karega
+
+export const getAllGroups = async (req: any, res: Response) => {
+    try {
+        const { page, limit } = req.query
+
+        const finalResult= await groupService.getAllGroups(page, limit)
+
+        return res.status(200)
+                  .json(new apiResponse(200, finalResult, "Group details fetched successfully!"))
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            return res.status(error.status).json(error);
+        }
+
+        const status = error.status ?? 500;
+        const errName = error.errName ?? error.name ?? "InternalServerError";
+        const errMessage = error.errMessage ?? error.message ?? "An unexpected error occurred";
+
+        return res.status(status).json(
+            new apiError(status, errName, errMessage)
+        );
+    }
+}
