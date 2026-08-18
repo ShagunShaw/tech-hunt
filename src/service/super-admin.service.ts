@@ -1,19 +1,86 @@
 import { eq, inArray, sql } from "drizzle-orm"
 import { db } from "../drizzle/db"
-import { Admin, Group, GroupMember, Question } from "../drizzle/schema"
+import { Admin, Group, GroupMember, Question, Theme } from "../drizzle/schema"
 import { apiError } from "../utils/ApiError"
 import { GameConfig } from "../drizzle/schema";
 import client from "../redis.config";
-import { genreSchema } from "../validations/tokenUser.type";
+import { domainSchema, genreSchema } from "../validations/tokenUser.type";
 import * as z from "zod";
 import { EXTRA_POINTS } from "../constants/point.constant";
 
 
-const assignQuestions = async () => {       // assign a proper name
+const assignQuestions = async () => {       
     try {
-        const dsa = await db.select({ id: Question.id })
-                            .from(Question)
-                            .where(eq(Question.domain, 'DSA'))
+        const domains = domainSchema.options;           // 'domainSchema.options' contains ['DSA', 'Web', 'AI/ML', 'Cybersecurity', 'Cloud&Devops', 'BlockChain'] from the domainSchema we defined in our zod file
+
+        const queryPromises = domains.map(domainName =>
+            db.select({ id: Question.id })
+                .from(Question)
+                .where(eq(Question.domain, domainName))
+        );
+
+        const [dsa, web, aiml, cyber, cloud, blockchain] = await Promise.all(queryPromises);
+
+        if (!dsa || dsa.length === 0) throw new apiError(500, "DSA Missing", "Could not fetch dsa questions from the db")
+        if (!web || web.length === 0) throw new apiError(500, "Web Missing", "Could not fetch web questions from the db")
+        if (!aiml || aiml.length === 0) throw new apiError(500, "AI/ML Missing", "Could not fetch AI/ML questions from the db")
+        if (!cyber || cyber.length === 0) throw new apiError(500, "CyberSecurity Missing", "Could not fetch cybersecurity questions from the db")
+        if (!cloud || cloud.length === 0) throw new apiError(500, "Cloud&DevOps Missing", "Could not fetch cloud & devops questions from the db")
+        if (!blockchain || blockchain.length === 0) throw new apiError(500, "Blockchain Missing", "Could not fetch blockchain questions from the db")
+
+        if (dsa.length !== 6) throw new apiError(400, "Insufficient Questions", "DSA domain needs at least/most 6 questions")
+        if (web.length !== 6) throw new apiError(400, "Insufficient Questions", "Web domain needs at least/most 6 questions")
+        if (aiml.length !== 6) throw new apiError(400, "Insufficient Questions", "AI/ML domain needs at least/most 6 questions")
+        if (cyber.length !== 6) throw new apiError(400, "Insufficient Questions", "CyberSecurity domain needs at least/most 6 questions")
+        if (cloud.length !== 6) throw new apiError(400, "Insufficient Questions", "Cloud&Devops domain needs at least/most 6 questions")
+        if (blockchain.length !== 6) throw new apiError(400, "Insufficient Questions", "Blockchain domain needs at least/most 6 questions")
+
+
+        // Shuffling my question for each domain
+        const shuffle = (arr: any[]) => arr.sort(() => Math.random() - 0.5)
+
+        const shuffledDsa = shuffle(dsa)
+        const shuffledWeb = shuffle(web)
+        const shuffleAiml = shuffle(aiml)
+        const shuffleCyber = shuffle(cyber)
+        const shuffleCloud = shuffle(cloud)
+        const shuffleBlockchain = shuffle(blockchain)
+
+
+        const lists: any = [];
+        for (let i = 0; i < 6; i++) {
+            const temp = [];
+            temp.push(shuffledDsa[i]?.id)
+            temp.push(shuffledWeb[i]?.id)
+            temp.push(shuffleAiml[i]?.id)
+            temp.push(shuffleCyber[i]?.id)
+            temp.push(shuffleCloud[i]?.id)
+            temp.push(shuffleBlockchain[i]?.id)
+
+            lists.push(temp);
+        }
+
+        const existingThemes = await db.select({ id: Theme.id }).from(Theme);
+
+        if (existingThemes.length === 0) throw new apiError(500, "Themes not fetched", "Could not fetch themes id from the db")
+
+        if (existingThemes.length !== 6) throw new apiError(400, "Could not start the game", "Total 6 themes are not present in the db, so cant start the game")
+
+        await db.transaction(async (tx) => {
+
+            const updatePromises = lists.map((arr: [], index: number) => {
+                const targetTheme = existingThemes[index];
+
+                if (targetTheme) {
+                    return tx.update(Theme)
+                        .set({ questionOrder: arr })
+                        .where(eq(Theme.id, targetTheme.id));
+                }
+                return null;
+            }).filter(Boolean);
+
+            await Promise.all(updatePromises);
+        });
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;
@@ -121,7 +188,7 @@ export const startGame = async () => {
         }
         // now if there is a particpant who has not joined a group but when asking in public who is he, he is not responding also, so there is a way I can look into my redis without running any code in the application (on redis CLI we will), who is that one participant. and if required we can also remove that partcipant from redis cache without any code in application but using CLI command
 
-        before starting the game, parallelise questions assignment across 6 domains using Promise.all (agr context ni milra what is it, then ask claude, it knows about it)
+        await assignQuestions();
 
         const result = await db.update(GameConfig)
             .set({ isRunning: true, startTime: new Date() })
@@ -135,7 +202,7 @@ export const startGame = async () => {
 
         await client.del('group:registered')
 
-        const data = { gameRunning: true, gameDuration: result[0]?.duration, gameStartTime: startingTime };
+        const data = { gameRunning: true, gameDuration: result[0]?.duration, gameStartTime: result[0]?.startTime };
         return data;
 
     } catch (error: any) {
