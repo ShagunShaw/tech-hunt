@@ -26,5 +26,7 @@ router.patch("/disqualify/:groupId", verifyJWT, authorize('super-admin'), superA
 
 router.post("/specialGroup", verifyJWT, authorize('super-admin'), superAdminController.createSpecialGroup)
 
+router.get("/results", verifyJWT, authorize('super-admin'), superAdminController.getResults)
+
 
 export default router

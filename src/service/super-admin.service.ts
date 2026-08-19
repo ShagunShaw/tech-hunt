@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm"
+import { asc, desc, eq, inArray, sql } from "drizzle-orm"
 import { db } from "../drizzle/db"
 import { Admin, Group, GroupMember, Question, Theme } from "../drizzle/schema"
 import { apiError } from "../utils/ApiError"
@@ -9,7 +9,7 @@ import * as z from "zod";
 import { EXTRA_POINTS } from "../constants/point.constant";
 
 
-const assignQuestions = async () => {       
+const assignQuestions = async () => {
     try {
         const domains = domainSchema.options;           // 'domainSchema.options' contains ['DSA', 'Web', 'AI/ML', 'Cybersecurity', 'Cloud&Devops', 'BlockChain'] from the domainSchema we defined in our zod file
 
@@ -441,3 +441,31 @@ export const allocateExtraPointsByLevel = async () => {
         );
     }
 };
+
+export const getResults = async () => {
+    try {
+        const isRunning = await client.get('game:isRunning')
+
+        // !isRunning means game not started yet and isRunning === 'true' means game is running currently, so cant give the results
+        if (!isRunning || isRunning === 'true') throw new apiError(400, "Can not give results", "The game is either running or has not started yet, so cant give the results")
+
+        const groups = await db.select({ id: Group.id, name: Group.name, points: Group.points, timeTaken: Group.timeTaken, theme: Group.themeAssigned })
+            .from(Group)
+            .where(eq(Group.status, 'cleared'))
+            .orderBy(desc(Group.points), asc(Group.timeTaken))    // Sorts by points (highest first). If points are equal, sorts by timeTaken (lowest/fastest first)
+
+        if (groups.length === 0) throw new apiError(400, "Cant calculate results", "Cant calculate the results as there are no groups who had cleared all the levels by the end of the game")
+
+        return groups;
+    } catch (error: any) {
+        if (error instanceof apiError) {
+            throw error;
+        }
+
+        throw new apiError(
+            500,
+            error.name || "InternalServerError",
+            error.message || "An unexpected error occurred during points allocation"
+        );
+    }
+}
