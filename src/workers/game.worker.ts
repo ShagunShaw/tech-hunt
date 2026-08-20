@@ -5,7 +5,7 @@ import { GameConfig, Group } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
 // Helper function to handle a single pattern with batch unlinking
-async function clearSinglePattern(pattern: string) {
+export async function clearSinglePattern(pattern: string) {
     let batch = [];
     const BATCH_SIZE = 100;
 
@@ -28,6 +28,10 @@ export const gameWorker = new Worker('game', async (job) => {
             Dont forget to add winston logs in this case for each group and for GameConfig;
 
             const duration = await client.get('game:duration')
+
+            if (!duration) {
+                throw new Error("Game duration not found in Redis")
+            }
 
             const result = await db.transaction(async (tx) => {
                 const val = await tx.update(Group)

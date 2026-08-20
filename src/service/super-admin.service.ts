@@ -7,7 +7,7 @@ import client from "../redis.config";
 import { domainSchema, genreSchema } from "../validations/tokenUser.type";
 import * as z from "zod";
 import { EXTRA_POINTS } from "../constants/point.constant";
-import { Queue } from "bullmq";
+import { clearSinglePattern } from "../workers/game.worker";
 import { gameQueue } from "../game.queue";
 
 const assignQuestions = async () => {
@@ -204,7 +204,7 @@ export const startGame = async () => {
         await client.del('group:registered')
 
         // Setting up a cron job (sort of) thing for handling automatic game ends.
-        await gameQueue.add('autoEnd', {}, {delay: (Number(result[0]?.duration) + 5) * 1000});      // +5 is for 5 seconds buffer, before ending the game
+        await gameQueue.add('autoEnd', {}, { delay: (Number(result[0]?.duration) + 5) * 1000, jobId: 'autoEnd1234' });      // +5 is for 5 seconds buffer, before ending the game
 
         const data = { gameRunning: true, gameDuration: result[0]?.duration, gameStartTime: result[0]?.startTime };
         return data;
@@ -224,31 +224,44 @@ export const startGame = async () => {
 
 export const endGame = async () => {
     try {
-        jo jo update auto mei ki ho yha bhi kro
+        Dont forget to add winston logs in this case for each group and for GameConfig;
 
         const val = await client.get('game:isRunning');
         if (!val || val === 'false') throw new apiError(400, "Cannot End Game", "Cannot end the game as it is either not started or has been ended previously")
 
-        Also freeze the 'timeTaken' field of Groups Table, so that their timer does not continues running while the game has been ended(make this change for both auto - finish and manual finish). Although the game routes will be blocked after the duration exceeded, but their timer will continue running, need to freeze it manually.
-
-        Also clear all records from the redis, that had been added to it, during or before the game.Dont forget to store final point and time taken for each group in the db, before clearing the redis
-
         const startTime = await client.get('game:startTime')
         const duration = Math.ceil((new Date().getTime() - Number(startTime)) / 1000)
 
-        const result = await db.update(GameConfig)
-            .set({ isRunning: false, duration })
-            .returning({ duration: GameConfig.duration })
+        const result = await db.transaction(async (tx) => {
+            const val = await tx.update(Group)
+                .set({ timeTaken: (duration / 60).toFixed(2) })
+                .where(eq(Group.status, 'active'))
+                .returning({ id: Group.id })
 
-        if (result.length == 0) throw new apiError(500, "Game Not Ended", "Something went wrong while ending the game")
+            console.log(`${val.length} groups could not make it to the final level before game ended`)
+
+            const val2 = await tx.update(GameConfig)
+                .set({ isRunning: false, duration })
+                .returning({ duration: GameConfig.duration })
+
+            if (val2.length == 0) throw new apiError(500, "Game Not Ended", "Something went wrong while ending the game")
+
+            return val2;
+        });
+
+        const patterns: string[] = ['questionCount:domain:*', 'theme:*', 'maxLevel:*', 'hints:*', 'group:member:*', 'genre:*'];
 
         await client.set('game:isRunning', 'false')
         await client.set('game:duration', String(result[0]?.duration))
 
+        const tasks = patterns.map(pattern => clearSinglePattern(pattern));
+        await Promise.all(tasks);
+
+        const job = await gameQueue.getJob('autoEnd1234')
+        if (job) await job.remove()     // since yha game manually end hua h, so stopping the BullMQ wala timer
+
         const data = { gameRunning: false, gameDuration: result[0]?.duration }
         return data
-
-        since yha game manually end hua h, toh auto wala ka timer stop kro
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;
