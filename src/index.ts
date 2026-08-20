@@ -12,6 +12,7 @@ import GroupRouter from "./routes/group.routes"
 import ThemeRouter from "./routes/theme.routes"
 import QuestionRouter from "./routes/question.routes"
 import GameRouter from "./routes/game.routes"
+import './workers/game.worker'          // Just importing it is enough — worker will starts listening automatically across all files
 
 await client.connect();
 

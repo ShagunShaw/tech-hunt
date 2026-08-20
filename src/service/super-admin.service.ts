@@ -7,7 +7,8 @@ import client from "../redis.config";
 import { domainSchema, genreSchema } from "../validations/tokenUser.type";
 import * as z from "zod";
 import { EXTRA_POINTS } from "../constants/point.constant";
-
+import { Queue } from "bullmq";
+import { gameQueue } from "../game.queue";
 
 const assignQuestions = async () => {
     try {
@@ -202,6 +203,9 @@ export const startGame = async () => {
 
         await client.del('group:registered')
 
+        // Setting up a cron job (sort of) thing for handling automatic game ends.
+        await gameQueue.add('autoEnd', {}, {delay: (Number(result[0]?.duration) + 5) * 1000});      // +5 is for 5 seconds buffer, before ending the game
+
         const data = { gameRunning: true, gameDuration: result[0]?.duration, gameStartTime: result[0]?.startTime };
         return data;
 
@@ -220,6 +224,8 @@ export const startGame = async () => {
 
 export const endGame = async () => {
     try {
+        jo jo update auto mei ki ho yha bhi kro
+
         const val = await client.get('game:isRunning');
         if (!val || val === 'false') throw new apiError(400, "Cannot End Game", "Cannot end the game as it is either not started or has been ended previously")
 
@@ -241,6 +247,8 @@ export const endGame = async () => {
 
         const data = { gameRunning: false, gameDuration: result[0]?.duration }
         return data
+
+        since yha game manually end hua h, toh auto wala ka timer stop kro
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;
