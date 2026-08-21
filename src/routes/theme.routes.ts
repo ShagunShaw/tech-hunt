@@ -25,5 +25,3 @@ router.post("/reorder/:themeId", verifyJWT, authorize('admin', 'super-admin'), t
 
 
 export default router;
-
-last mei ek ya do routes aur banana h (dont know in which file), jha pe you can fetch the message and question of a particular theme at a particular stage. Yha toh themes and uska messages 'getAll' krre h, but for a particular theme, we need to fetch the message and question also for a given stage; and make sure to make these two routes public and not protected

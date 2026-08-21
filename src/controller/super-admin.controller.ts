@@ -26,17 +26,25 @@ export const getPendingAdmins = async (req: Request, res: Response) => {
 
 export const manageApproval = async (req: Request, res: Response) => {
     try {
-        Wait, instead of approving each admin one by one, which would lead to multiple db calls, replace this now and use 'Batch Processing', to approve multiple admins at once.
-            const { adminId } = req.params
+        const { adminId, status } = req.body;
 
-        if (!adminId) return res.status(400).json(new apiError(400, "Admin Id missing", "Admin id is missing in params"))
+        if (!adminId || isNaN(Number(adminId))) {
+            return res.status(400).json(
+                new apiError(400, "Admin Id missing", "adminId must be a valid number in req.body")
+            );
+        }
 
-        const { status } = req.body
-        if (!status || !statusSchema.safeParse(status).success) return res.status(400).json(new apiError(400, "Error with status field", "status field is either missing or is not in the required format"))
+        if (!status || !statusSchema.safeParse(status).success) {
+            return res.status(400).json(
+                new apiError(400, "Error with status field", "status field is either missing or invalid")
+            );
+        }
 
-        const data = await superAdminService.manageApprovalService(parseInt(adminId as string), status)
+        const data = await superAdminService.manageApprovalService(Number(adminId), status);
 
-        return res.status(200).json(new apiResponse(200, data, "Admin approved successfully"))
+        return res.status(202).json(
+            new apiResponse(202, data, "Admin status updated successfully")
+        );
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);
@@ -74,14 +82,19 @@ export const getApprovedAdmins = async (req: Request, res: Response) => {
 
 export const deleteAdmin = async (req: Request, res: Response) => {
     try {
-        Instead of deleting each admin one by one, which would lead to multiple db calls, replace this now and use 'Batch Processing', to delete multiple admins at once.
-            const { adminId } = req.params
+        const { adminId } = req.params;
 
-        if (!adminId) return res.status(400).json(new apiError(400, "Admin Id missing", "Admin id not found in params"))
+        if (!adminId || isNaN(Number(adminId))) {
+            return res.status(400).json(
+                new apiError(400, "Admin Id missing", "Admin id not found in params")
+            );
+        }
 
-        const data = superAdminService.deleteAdminService(parseInt(adminId as string))
+        const data = await superAdminService.deleteAdminService(parseInt(adminId as string));
 
-        return res.status(200).json(new apiResponse(200, data, "Admin deleted successfully"))
+        return res.status(202).json(
+            new apiResponse(202, data, "Admin deleted successfully")
+        );
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);
@@ -95,7 +108,7 @@ export const deleteAdmin = async (req: Request, res: Response) => {
             new apiError(status, errName, errMessage)
         );
     }
-}
+};
 
 export const startGame = async (req: any, res: Response) => {
     try {

@@ -3,7 +3,7 @@ import * as userService from '../service/user.service'
 import { apiError } from '../utils/ApiError'
 import { apiResponse } from '../utils/ApiResponse'
 
-google console mei jaake last mei select kro, what all info you want from person google account like email, username, and googleId
+// google console mei jaake last mei select kro, what all info you want from person google account like email, username, and googleId
 
 export const googleParticipantRedirect = (req: Request, res: Response) => {
     const redirectUri = 'http://localhost:3000/api/v1/auth/google/register/callback';
@@ -47,7 +47,6 @@ export const partcipantRegister = async (req: Request, res: Response) => {
 
         const data = await userService.register(token, phone, college, department, year)
 
-        After displaying the success message, navigate participant to the home page only, no login after registartion
         return res.status(201)
             .clearCookie('googleTempData')
             .json(new apiResponse(201, data, "Participant registered successfully"))
@@ -107,11 +106,11 @@ export const adminRegister = async (req: Request, res: Response) => {
 
         const data = await userService.registerAdmin(token, phone, description)
 
-        After displaying the success message(along with the message "waiting for super-admin to approve your request"), navigate admin to the home page only, no login after registartion
+        // After displaying the success message(along with the message "waiting for super-admin to approve your request"), navigate admin to the home page only, no login after registartion
 
         return res.status(201)
             .clearCookie('googleTempData')
-            .json(new apiResponse(201, data, "Admin registered successfully"))
+            .json(new apiResponse(201, data, "Admin registered successfully, waiting for super-admin to approve your request"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);

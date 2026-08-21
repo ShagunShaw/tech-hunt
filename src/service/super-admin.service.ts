@@ -9,6 +9,8 @@ import * as z from "zod";
 import { EXTRA_POINTS } from "../constants/point.constant";
 import { clearSinglePattern } from "../workers/game.worker";
 import { gameQueue } from "../game.queue";
+import { adminBatcher } from "../batch processes/adminApprovalBatcher";
+import { deleteAdminBatcher } from "../batch processes/deleteAdminBatcher";
 
 const assignQuestions = async () => {
     try {
@@ -124,16 +126,9 @@ export const getAdmins = async (status: 'approved' | 'pending') => {
 
 export const manageApprovalService = async (adminId: number, status: 'approved' | 'rejected') => {
     try {
-        const data = await db.update(Admin)
-            .set({ status: ((status === 'approved') ? 'approved' : 'rejected') })
-            .where(eq(Admin.id, adminId))
-            .returning({ id: Admin.id })
+        return await adminBatcher.add(adminId, status);
 
-        if (data.length === 0) throw new apiError(404, "Entry not found", "No such entry with this admin id found")
-
-        Send an email to the admin about their acception / rejection via Kafka's email service
-
-        return data;
+        Send an email to the admin about their acception / rejection via Kafka's email service (dekho if possible)
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;
@@ -149,15 +144,9 @@ export const manageApprovalService = async (adminId: number, status: 'approved' 
 
 export const deleteAdminService = async (adminId: number) => {
     try {
-        const data = await db.delete(Admin)
-            .where(eq(Admin.id, adminId))
-            .returning({ id: Admin.id })
+        return await deleteAdminBatcher.add(adminId);
 
-        if (data.length === 0) throw new apiError(404, "Entry not found", "No such entry with this admin id found")
-
-        Send an email to the admin about them being removed via Kafka's email service
-
-        return data;
+        Send an email to the admin about them being removed via Kafka's email service (if possible)
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;

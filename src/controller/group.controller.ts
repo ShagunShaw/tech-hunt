@@ -106,8 +106,6 @@ export const abort = async (req: any, res: Response) => {
     }
 }
 
-Also check participant register krne k baad, unko directly approve krr de rhe h ky, ki super-admin unko approve karega
-
 export const getAllGroups = async (req: any, res: Response) => {
     try {
         const { page, limit } = req.query

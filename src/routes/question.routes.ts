@@ -30,6 +30,4 @@ router.delete("/hints/:questionId", verifyJWT, authorize('admin', 'super-admin')
 
 router.patch("/hints/:questionId", verifyJWT, authorize('admin', 'super-admin'), question.updateHints)
 
-Assign questions at the time of game start, I think iska sirf service hi banana hoga jo ki startGame service mei call hoga, so check it once
-
 export default router;

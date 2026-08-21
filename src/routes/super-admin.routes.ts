@@ -16,8 +16,7 @@ router.delete("/admin/:adminId", verifyJWT, authorize("super-admin"), superAdmin
 
 router.patch("/startGame", verifyJWT, authorize('super-admin'), superAdminController.startGame)
 
-// finish the game (we have options for both auto-finish and explicit finish by the super-admin before the game duration ends, in this route we are only handling the explicit finish by super-admin)
-For auto-finish, we will use Bull Queue . Will Schedule it to run at startTime + duration, set isStarted = false automatically in the db, to auto-finish our game
+// finish the game (we have options for both auto-finish (using BullMQ worker) and explicit finish by the super-admin before the game duration ends. In this route, we are only handling the explicit finish by super-admin)
 router.patch("/endGame", verifyJWT, authorize('super-admin'), isRunning, superAdminController.endGame)
 
 router.patch("/extraPoints", verifyJWT, authorize('super-admin'), isRunning, superAdminController.allocateExtraPoints)
