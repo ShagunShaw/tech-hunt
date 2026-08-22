@@ -3,6 +3,7 @@ import client, { redisConnection } from '../redis.config'
 import { db } from '../drizzle/db';
 import { GameConfig, Group } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import logger from '../logger';
 
 // Helper function to handle a single pattern with batch unlinking
 export async function clearSinglePattern(pattern: string) {
@@ -25,8 +26,6 @@ export async function clearSinglePattern(pattern: string) {
 export const gameWorker = new Worker('game', async (job) => {
     try {
         if (job.name === 'autoEnd') {
-            Dont forget to add winston logs in this case for each group and for GameConfig;
-
             const duration = await client.get('game:duration')
 
             if (!duration) {
@@ -39,13 +38,23 @@ export const gameWorker = new Worker('game', async (job) => {
                     .where(eq(Group.status, 'active'))
                     .returning({ id: Group.id })
 
-                console.log(`${val.length} groups could not make it to the final level before game ended`)
+                console.log(`${val.length} groups could not make it to the final level before game ended automatically`)
+                logger.info("groupsLeftToCompleteTheGame", {
+                    groupsleft: val.length
+                })
 
                 const val2 = await tx.update(GameConfig)
                     .set({ isRunning: false })
                     .returning({ duration: GameConfig.duration })
 
                 if (val2.length == 0) throw new Error("GameConfig update failed")       // No apiError needed — workers don't deal with HTTP responses.
+
+                logger.info("gameEnd", {
+                    endTime: new Date(),
+                    mode: "Auto",
+                    finalDuration: String(val2[0]?.duration),
+                    isRunning: false,
+                })
 
                 return val;
             });

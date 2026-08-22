@@ -36,5 +36,3 @@ const logger = winston.createLogger({
 });
 
 export default logger;
-
-All done, now you can log in any file you want using logger.info(), logger.error(), logger.warn(), etc.

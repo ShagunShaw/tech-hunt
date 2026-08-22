@@ -1,4 +1,5 @@
 user.controller.ts
 schema.ts
-
-service se shuru krna h
+index.ts
+user.service.ts
+super-admin.service.ts

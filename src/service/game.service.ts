@@ -1,6 +1,5 @@
 // " HEART OF THE APPLICATION "   --- Ab jo bhi extra issues hoga wo testing k time fix kiya jayega
 
-
 import { sql, eq } from "drizzle-orm";
 import { db } from "../drizzle/db";
 import { Group, Question, Theme, ThemeMessage } from "../drizzle/schema";
@@ -8,6 +7,7 @@ import client from "../redis.config";
 import { apiError } from "../utils/ApiError";
 import { POINTS } from "../constants/point.constant";
 import { levelSchema } from "../validations/tokenUser.type";
+import logger from "../logger"
 
 export const scanStartQR = async (groupId: any) => {
     try {
@@ -22,8 +22,9 @@ export const scanStartQR = async (groupId: any) => {
         if (existing) throw new apiError(400, "Already Started", "Your game has already started")
 
         let result: any = await client.get(`theme:${assignedThemeId}:message:1`)
+        let parsedThemeId: any = ""
         if (!result) {
-            const parsedThemeId = Number(assignedThemeId)
+            parsedThemeId = Number(assignedThemeId)
 
             if (isNaN(parsedThemeId)) {
                 throw new apiError(400, "Invalid theme ID", "Theme ID must be a valid number")
@@ -49,6 +50,12 @@ export const scanStartQR = async (groupId: any) => {
         }
 
         await client.set(`maxLevel:${groupId}`, 0)
+        logger.info('ScanQR', {
+            groupId: groupId,
+            themeId: parsedThemeId,
+            maxLevel: 0,
+            timeStamp: new Date()
+        })
 
         return result;
     } catch (error: any) {
@@ -145,6 +152,13 @@ export const scanQR = async (groupId: any, themeId: any, level: any) => {
             }]
         }
 
+        logger.info('ScanQR', {
+            groupId: groupId,
+            themeId: parsedThemeId,
+            maxLevel: parsedLevel,
+            timeStamp: new Date()
+        })
+
         return { finalResult, parsedLevel };
     } catch (error: any) {
         if (error instanceof apiError) {
@@ -181,8 +195,6 @@ export const useHints = async (groupId: any, level: any) => {
         if (isNaN(parsedThemeId)) {
             throw new apiError(400, "Invalid theme ID", "Theme ID must be a valid number")
         }
-
-        Dont forget to add logs in this part that which groupId has used which hint(hint[0], hint[1], etc.) at which stage, along with thier updated points after using the hints
 
         const maxLevelReached = await client.get(`maxLevel:${groupId}`)
         if (!maxLevelReached) throw new apiError(500, "Missing maxLevelReached value", "The value of max level reached is missing from the redis")
@@ -248,6 +260,16 @@ export const useHints = async (groupId: any, level: any) => {
             updatedPoint: updated[0]?.points
         }
 
+        logger.info("useHints", {
+            groupId: parsedGroupId,
+            themeId: parsedThemeId,
+            level: parsedLevel,             // Here, level means kis question ka hint aap access krre ho
+            hintNumber: (maxHintsUsed) ? (Number(maxHintsUsed) + 1) : (1),
+            pointsDeducted: deduction,
+            updatedPoint: updated[0]?.points,
+            timestamp: new Date()
+        })
+
         return finalResult;
     } catch (error: any) {
         if (error instanceof apiError) {
@@ -265,9 +287,7 @@ export const useHints = async (groupId: any, level: any) => {
 export const updatePoints = async (groupId: any) => {
     try {
         const isExited = (await client.sIsMember('groups:aborted', String(groupId))) || (await client.sIsMember('groups:disqualified', String(groupId)))
-        if (isExited) throw new apiError(403, "Forbidden", "You cannot access this route as you had either aborted or had been disqualified from the game")
-
-        Make sure to add logs in this part also
+        if (isExited) throw new apiError(403, "Forbidden", "You cannot access this route as you had either aborted or had been disqualified from the game");
 
         const maxLevelReached = await client.get(`maxLevel:${groupId}`)
         if (!maxLevelReached) throw new apiError(500, "Missing maxLevelReached value", "The value of max level reached is missing from the redis")
@@ -301,7 +321,7 @@ export const updatePoints = async (groupId: any) => {
                     timeTaken: (timeTaken / 60000).toFixed(2)          // 1 minute = 60,000 miliseconds
                 })
                 .where(eq(Group.id, parsedGroupId))
-                .returning({ id: Group.id, status: Group.status, points: Group.points, timeTaken: Group.timeTaken, maxLevelReached: Group.maxLevelReached })
+                .returning({ id: Group.id, status: Group.status, points: Group.points, timeTaken: Group.timeTaken, maxLevelReached: Group.maxLevelReached, themeId: Group.themeAssigned })
 
             if (result.length == 0) throw new apiError(404, "Not Found", "So such group with this groupId is found!")
 
@@ -321,6 +341,7 @@ export const updatePoints = async (groupId: any) => {
                         id: Group.id,
                         points: Group.points,
                         maxLevelReached: Group.maxLevelReached,
+                        themeId: Group.themeAssigned
                     });
 
                 if (updatedGroups.length === 0) {
@@ -392,6 +413,15 @@ export const updatePoints = async (groupId: any) => {
         const finalResult = [{ result, message }]
         await client.del(`hints:${groupId}:${Number(maxLevelReached) + 1}`);
         await client.set(`maxLevel:${groupId}`, Number(maxLevelReached) + 1);
+
+        logger.info("updatePoints", {
+            groupId: parsedGroupId,
+            themeId: result[0]?.themeId,
+            maxLevel: Number(maxLevelReached) + 1,
+            pointsAdded: pointsToAdd,
+            updatedPoint: result[0]?.points,
+            timestamp: new Date()
+        })
 
         return finalResult;
     } catch (error: any) {

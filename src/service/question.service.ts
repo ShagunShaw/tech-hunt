@@ -12,8 +12,6 @@ interface UpdatePayload {
     answer?: string[];
 }
 
-Question Allocation to different themes will be done on 'themeId' and not 'themeName'
-
 export const addQuestion = async (question: string, domain: any, answer: any, hints: any) => {
     try {
         if (!question || !domain || !answer || !hints) throw new apiError(422, "Missing Values", "Either question or domain or hints or answer field is missing")

@@ -11,6 +11,8 @@ import { clearSinglePattern } from "../workers/game.worker";
 import { gameQueue } from "../game.queue";
 import { adminBatcher } from "../batch processes/adminApprovalBatcher";
 import { deleteAdminBatcher } from "../batch processes/deleteAdminBatcher";
+import logger from "../logger";
+import { RoundRobin } from "./group.service";
 
 const assignQuestions = async () => {
     try {
@@ -196,6 +198,13 @@ export const startGame = async () => {
         await gameQueue.add('autoEnd', {}, { delay: (Number(result[0]?.duration) + 5) * 1000, jobId: 'autoEnd1234' });      // +5 is for 5 seconds buffer, before ending the game
 
         const data = { gameRunning: true, gameDuration: result[0]?.duration, gameStartTime: result[0]?.startTime };
+
+        logger.info("gameStart", {
+            startTime: String(result[0]?.startTime),
+            initialDuration: String(result[0]?.duration),
+            isRunning: true
+        })
+
         return data;
 
     } catch (error: any) {
@@ -213,8 +222,6 @@ export const startGame = async () => {
 
 export const endGame = async () => {
     try {
-        Dont forget to add winston logs in this case for each group and for GameConfig;
-
         const val = await client.get('game:isRunning');
         if (!val || val === 'false') throw new apiError(400, "Cannot End Game", "Cannot end the game as it is either not started or has been ended previously")
 
@@ -228,6 +235,9 @@ export const endGame = async () => {
                 .returning({ id: Group.id })
 
             console.log(`${val.length} groups could not make it to the final level before game ended`)
+            logger.info("groupsLeftToCompleteTheGame", {
+                groupsleft: val.length
+            })
 
             const val2 = await tx.update(GameConfig)
                 .set({ isRunning: false, duration })
@@ -250,6 +260,14 @@ export const endGame = async () => {
         if (job) await job.remove()     // since yha game manually end hua h, so stopping the BullMQ wala timer
 
         const data = { gameRunning: false, gameDuration: result[0]?.duration }
+
+        logger.info("gameEnd", {
+            endTime: new Date(),
+            mode: "Manual",
+            finalDuration: String(result[0]?.duration),
+            isRunning: false,
+        })
+
         return data
     } catch (error: any) {
         if (error instanceof apiError) {
@@ -279,6 +297,11 @@ export const disqualifyGroup = async (groupId: any) => {
         if (result.length === 0) throw new apiError(404, "Not Found", "No such group of this id is found")
 
         await client.sAdd('groups:disqualified', String(parsedGroupId))
+
+        logger.info("groupDisqualified", {
+            groupId: result[0]?.id,
+            timestamp: new Date()
+        })
 
         return result;
     } catch (error: any) {
@@ -344,10 +367,9 @@ export const createSpecialGroup = async (groupId: any, groupName: string) => {
         } else if (leftUsers.length >= 4) {
             throw new apiError(403, "Cannot Form Special Groups", `There are still ${leftUsers.length} members left to form a group out of which ${(leftUsers.length) / 4} groups can still be formed. First form those groups and then hit this route for grouping the left members (if any)`)
         } else {
-            if (!groupName) throw new apiError(400, "Group Name missing", "Since there are only 2 or 3 member left to form th group, a group name is required!")
+            if (!groupName) throw new apiError(400, "Group Name missing", "Since there are only 2 or 3 member left to form the group, a group name is required!")
 
-            Properly assign this theme later
-            const themeAssigned = "Theme 1"
+            const themeAssigned = await RoundRobin()
             const genres = await Promise.all(leftUsers.map(id => client.get(`genre:${id}`)))
             if (genres.some(g => g === null)) throw new apiError(500, "Genre Missing", "Genre of one/more then one candidate is missing, might be because they are already a part of any other group")
             if (genres.some(g => !genreSchema.safeParse(g).success)) throw new apiError(500, "Genre Mismatch", "Provided genre of one/more than one candidate does not match with any of the specified genres")
@@ -356,7 +378,7 @@ export const createSpecialGroup = async (groupId: any, groupName: string) => {
             result = await db.transaction(async (tx) => {
 
                 const result2 = await tx.insert(Group)
-                    .values({ name: groupName, themeAssigned })
+                    .values({ name: groupName, themeAssigned: themeAssigned.themeName })
                     .returning({ id: Group.id });
 
                 if (result2.length === 0) {
@@ -364,6 +386,7 @@ export const createSpecialGroup = async (groupId: any, groupName: string) => {
                 }
 
                 const newGroupId = Number(result2[0]?.id);
+                await client.set(`theme:${newGroupId}`, String(themeAssigned.index))
 
                 if (leftUsers.length === 2) {
                     await tx.insert(GroupMember).values([
@@ -382,7 +405,7 @@ export const createSpecialGroup = async (groupId: any, groupName: string) => {
                 return [{
                     groupId: newGroupId,
                     groupName,
-                    themeAssigned
+                    themeAssigned: themeAssigned.themeName
                 }];
             });
 
@@ -390,6 +413,15 @@ export const createSpecialGroup = async (groupId: any, groupName: string) => {
             const redisDeleteKeys = leftUsers.map(id => `genre:${id}`);
             await client.del(redisDeleteKeys);
         }
+
+        logger.info("groupCreated", {
+            groupName: result[0]?.groupName,
+            groupId: result[0]?.groupId,
+            groupType: "Special",
+            groupMembers: "Could not fetch for now!",
+            respectiveGenres: "Could not fetch for now!",
+            timestamp: new Date()
+        })
 
         return result;
     } catch (error: any) {
@@ -409,7 +441,7 @@ export const allocateExtraPointsByLevel = async () => {
     try {
         // This 'caseChunk' will help us to allocate extra points to each groups depending upon the max level they had reached so far 
         const caseChunks = Object.entries(EXTRA_POINTS).map(
-            ([level, points]) => sql`WHEN ${Group.maxLevelReached} = ${level} THEN ${points}`
+            ([level, points]) => sql`WHEN ${Group.maxLevelReached} = ${String(level)} THEN ${points}`
         );
 
         const pointsToAddSql = sql`CASE ${sql.join(caseChunks, sql` `)} ELSE 0 END`;
@@ -422,7 +454,7 @@ export const allocateExtraPointsByLevel = async () => {
                 })
                 .where(inArray(Group.status, ['active']))
                 .returning({
-                    id: Group.id,
+                    groupId: Group.id,
                     maxLevelReached: Group.maxLevelReached,
                     newPoints: Group.points
                 });
@@ -431,12 +463,30 @@ export const allocateExtraPointsByLevel = async () => {
                 throw new apiError(
                     404,
                     "No Groups Updated",
-                    "No groups currently match 'active' or 'cleared' status"
+                    "No groups currently match the 'active' status"
                 );
             }
 
             return updated;
         });
+
+        logger.info("extraPointsAllocated", {
+            groupCount: result.length,
+            timestamp: new Date()
+        })
+
+        for (let i = 0; i < result.length; i++) {
+            const maxLevelReached = Number(result[i]?.maxLevelReached);
+            const extraPoint = EXTRA_POINTS[maxLevelReached as keyof typeof EXTRA_POINTS] ?? 0;
+
+            logger.info("groupAllocatedExtraPoints", {
+                groupId: result[i]?.groupId,
+                maxLevel: result[i]?.maxLevelReached,
+                extraPointsAdded: extraPoint,
+                updatedPoint: result[i]?.newPoints,
+                status: 'active'
+            })
+        }
 
         return result;
     } catch (error: any) {

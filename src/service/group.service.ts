@@ -1,5 +1,3 @@
-when the TTL for a creating a group has expired and all members are not added to it, then how will all the members(who has been added in the group till now) and the group lead will be notified about it in frontend and will be asked to create another group
-
 import * as z from 'zod'
 import type { genreSchema } from '../validations/tokenUser.type'
 import client from '../redis.config'
@@ -7,10 +5,11 @@ import { apiError } from '../utils/ApiError'
 import { db } from "../drizzle/db"
 import { Group, GroupMember, Theme } from '../drizzle/schema'
 import { inArray, eq, and } from 'drizzle-orm'
+import logger from '../logger'
 
 type GenreType = z.infer<typeof genreSchema>;
 
-const RoundRobin = async () => {
+export const RoundRobin = async () => {
     try {
 
         // Atomically increment the counter (starts at 1 on first call)
@@ -32,7 +31,6 @@ const RoundRobin = async () => {
             const cachePromises: Promise<any>[] = [];
             for (let i = 0; i < themes.length; i++) {
                 if (typeof themes[i]?.name === 'string' && themes[i]?.id) {
-                    While handling Game End part(both by auto and super- admin), make sure to add a feature to remove all these below values also from redis, or it will stay here forever
 
                     cachePromises.push(client.set(`theme:number:${i + 1}`, String(themes[i]?.name)));
                     cachePromises.push(client.set(`theme:index:${i + 1}`, String(themes[i]?.id)));
@@ -85,10 +83,9 @@ export const registerGenre = async (genre: GenreType, userId: number) => {
     }
 }
 
-Check Type checkign for redis values: Number are treated as String
 export const createGroup = async (groupName: string, userId: number) => {
     try {
-        const result = await client.sAdd('group:registered', groupName)
+        const result = await client.sAdd('group:registered', groupName.toLowerCase())
         if (!result) throw new apiError(409, "Group Name reserved", "This group name is already taken, try something else")
 
         // create and add the req.user in the group
@@ -122,11 +119,11 @@ export const joinGroup = async (groupId: string, userId: number) => {
         if (!keyExists) {
             await client.sRem('group:registered', groupName)
 
-            throw new apiError(410, "Group Expired", "Group already expired, retry again")
+            throw new apiError(410, "Group Expired", "Group already expired, create a new group and retry again")
         }
 
         if (groupName === "unknown") {
-            throw new apiError(410, "Group Expired", "Group already expired, retry again")
+            throw new apiError(410, "Group Expired", "Group already expired, create a new group and retry again")
         }
 
         await client.sAdd(`group:member:${normalizedGroupId}`, String(userId))
@@ -164,6 +161,15 @@ export const joinGroup = async (groupId: string, userId: number) => {
                     { participantId: Number(arr[2]), genre: genres[2], groupId: newGroupId },
                     { participantId: Number(arr[3]), genre: genres[3] as any, groupId: newGroupId }
                 ]);
+
+                logger.info("groupCreated", {
+                    groupName: groupName,
+                    groupId: newGroupId,
+                    groupType: "Normal",        
+                    groupMembers: arr,
+                    respectiveGenres: genres,
+                    timestamp: new Date()
+                })
 
                 return {
                     createdGroupId: newGroupId,
@@ -216,6 +222,11 @@ export const abortGroup = async (userId: number, groupId: number) => {
         if (result.length == 0) return { success: false }
         else {
             await client.sAdd('groups:aborted', String(groupId))
+            logger.info("groupAborted", {
+                groupId: result[0]?.id,
+                timestamp: new Date()
+            })
+
             return { success: true }
         }
 

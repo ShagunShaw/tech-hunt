@@ -3,9 +3,6 @@ import { db } from "../drizzle/db";
 import { Theme, ThemeMessage } from "../drizzle/schema";
 import { apiError } from "../utils/ApiError";
 
-I think there is some mismatch here; here we have the service of creating new theme, but in our schema.ts file we had already created an enum field for theme, but there can be logically one thing possible, either theme enum in schema.ts or admin creating new themes. So check out and decide what you will opt for. 
-Also if you opt for theme enum in schema.ts then dont forget to add validation in our zod file and validate the themes here before actually adding/deleting/reading/updating from the database. 
-
 export const getAllTheme = async () => {
     try {
         const result = await db.select({        // 'result' will be an array of JSON containing all the rows from the table, and each JSON will have two fields - id, name
