@@ -26,7 +26,13 @@ export const getPendingAdmins = async (req: Request, res: Response) => {
 
 export const manageApproval = async (req: Request, res: Response) => {
     try {
-        const { adminId, status } = req.body;
+        const { adminId, adminEmail, status } = req.body;
+
+        const isEmail = typeof adminEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail);
+
+        if (!isEmail) {
+            return res.status(400).json(new apiError(400, "Invalid Email", "Admin's email is either not present in req.body or is in invalid format"));
+        }
 
         if (!adminId || isNaN(Number(adminId))) {
             return res.status(400).json(
@@ -40,7 +46,7 @@ export const manageApproval = async (req: Request, res: Response) => {
             );
         }
 
-        const data = await superAdminService.manageApprovalService(Number(adminId), status);
+        const data = await superAdminService.manageApprovalService(Number(adminId), adminEmail, status);
 
         return res.status(202).json(
             new apiResponse(202, data, "Admin status updated successfully")
@@ -82,7 +88,13 @@ export const getApprovedAdmins = async (req: Request, res: Response) => {
 
 export const deleteAdmin = async (req: Request, res: Response) => {
     try {
-        const { adminId } = req.params;
+        const { adminId, adminEmail } = req.params;
+
+        const isEmail = typeof adminEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail);
+
+        if (!isEmail) {
+            return res.status(400).json(new apiError(400, "Invalid Email", "Admin's email is either not present in req.body or is in invalid format"));
+        }
 
         if (!adminId || isNaN(Number(adminId))) {
             return res.status(400).json(
@@ -90,7 +102,7 @@ export const deleteAdmin = async (req: Request, res: Response) => {
             );
         }
 
-        const data = await superAdminService.deleteAdminService(parseInt(adminId as string));
+        const data = await superAdminService.deleteAdminService(parseInt(adminId as string), adminEmail);
 
         return res.status(202).json(
             new apiResponse(202, data, "Admin deleted successfully")
@@ -224,7 +236,7 @@ export const getResults = async (req: any, res: Response) => {
         const groups = await superAdminService.getResults();
 
         return res.status(200)
-                  .json(new apiResponse(200, groups, "Results fetched successfully!"))
+            .json(new apiResponse(200, groups, "Results fetched successfully!"))
     } catch (error: any) {
         if (error instanceof apiError) {
             return res.status(error.status).json(error);

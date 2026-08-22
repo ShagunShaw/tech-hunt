@@ -1,7 +1,6 @@
-Dont forget to add logger in the end
-
 import express from 'express'
 import 'dotenv/config'
+import cors from 'cors';
 import { apiResponse } from './utils/ApiResponse'
 import client from './redis.config'
 import cookieParser from 'cookie-parser'
@@ -19,11 +18,18 @@ await client.connect();
 const PORT= process.env.PORT || 3000
 const app= express()
 
-add the field of 'updatedAt' also in each table, and see how it can be managed so that every time an update is done, 'updatedAt' field gets updated automatically (without needing to update it manually)
-
 dont forget to add the super-admin record directly in our db, with status= 'approved'
 Also dont forget to add the row of 'GameConfig' table directly in our db
 
+app.use(cors({
+  origin: process.env.NODE_ENV === "production"
+    ? process.env.FRONTEND_URL
+    : [
+        "http://localhost:5173",
+        "http://localhost:5174",
+      ],
+  credentials: true,
+}));
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))     // When extended is true, sending form inputs with an array in it will automatically arrive in req.body as a native JavaScript array, completely bypassing manual conversion to an array.

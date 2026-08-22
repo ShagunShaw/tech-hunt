@@ -35,7 +35,8 @@ export const Admin = pgTable('admin', {
     description: varchar({length: 300}).notNull(),
     status: statusEnum().default('pending'),
     refreshTokens: jsonb().$type<{sessionId: string, token: string}[]>().default([]),
-    created_at: timestamp().defaultNow()
+    created_at: timestamp().defaultNow(),
+    updatedAt: timestamp().defaultNow().$onUpdate(() => new Date()), // Automatically sets timestamp on updates
 })
 
 
@@ -46,6 +47,7 @@ export const Group = pgTable('group', {
     points: smallint().default(25),     
     timeTaken: numeric({ precision: 5, scale: 2 }).default('0.00'),          // in minutes
     createdAt: timestamp().defaultNow(),
+    updatedAt: timestamp().defaultNow().$onUpdate(() => new Date()), // Automatically sets timestamp on updates
     maxLevelReached: levelEnum().default('0'),     
     themeAssigned: varchar({length: 50}).notNull()            
 })

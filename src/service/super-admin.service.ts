@@ -9,10 +9,11 @@ import * as z from "zod";
 import { EXTRA_POINTS } from "../constants/point.constant";
 import { clearSinglePattern } from "../workers/game.worker";
 import { gameQueue } from "../game.queue";
-import { adminBatcher } from "../batch processes/adminApprovalBatcher";
-import { deleteAdminBatcher } from "../batch processes/deleteAdminBatcher";
+import { adminBatcher } from "../batchProcesses/adminApprovalBatcher";
+import { deleteAdminBatcher } from "../batchProcesses/deleteAdminBatcher";
 import logger from "../logger";
 import { RoundRobin } from "./group.service";
+import { sendEmail } from "../emailService/sendEmail";
 
 const assignQuestions = async () => {
     try {
@@ -126,11 +127,42 @@ export const getAdmins = async (status: 'approved' | 'pending') => {
     }
 }
 
-export const manageApprovalService = async (adminId: number, status: 'approved' | 'rejected') => {
+export const manageApprovalService = async (adminId: number, adminEmail: string, status: 'approved' | 'rejected') => {
     try {
-        return await adminBatcher.add(adminId, status);
+        await adminBatcher.add(adminId, status);
 
-        Send an email to the admin about their acception / rejection via Kafka's email service (dekho if possible)
+        if (status === 'approved') {
+            const template = `
+                    <!DOCTYPE html>
+                    <html>
+                    <body style="font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 20px;">
+                      <div style="max-width: 500px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <h2 style="color: #0f172a; margin-top: 0;">Admin Request Approved</h2>
+                        <p style="color: #334155; font-size: 15px;">Your request for Admin Access for Tech Hunt application has been approved by the Super Admin.</p>
+                      </div>
+                    </body>
+                    </html>
+                `
+            await sendEmail(adminEmail, "Your Admin request has been approved!", template)
+        }
+        else {
+            const template = `
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 20px;">
+              <div style="max-width: 500px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h2 style="color: #c2410c; margin-top: 0;">Admin Request Rejected</h2>
+                <p style="color: #334155; font-size: 15px;">Your request for Admini Access for Tech Hunt application has been rejected by the Super Admin at this time.</p>
+                <p style="color: #475569; font-size: 14px;">As a result, admin access has not been granted to your account.</p>
+              </div>
+            </body>
+            </html>
+            `
+
+            await sendEmail(adminEmail, "Your Admin request has been rejected!", template)
+        }
+
+        return;
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;
@@ -144,11 +176,26 @@ export const manageApprovalService = async (adminId: number, status: 'approved' 
     }
 }
 
-export const deleteAdminService = async (adminId: number) => {
+export const deleteAdminService = async (adminId: number, adminEmail: string) => {
     try {
-        return await deleteAdminBatcher.add(adminId);
+        await deleteAdminBatcher.add(adminId);
 
-        Send an email to the admin about them being removed via Kafka's email service (if possible)
+        const template = `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 20px;">
+          <div style="max-width: 500px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <h2 style="color: #991b1b; margin-top: 0;">Admin Account Removed</h2>
+            <p style="color: #334155; font-size: 15px;">Your Admini access and privileges have been revoked by the Super Admin.</p>
+            <p style="color: #475569; font-size: 14px;">You will no longer be able to access the admin dashboard or manage platform resources.</p>
+          </div>
+        </body>
+        </html>
+        `
+
+        await sendEmail(adminEmail, "You have been removed from the Admin authority by the Super-Admin!", template);
+
+        return;
     } catch (error: any) {
         if (error instanceof apiError) {
             throw error;
