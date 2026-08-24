@@ -139,14 +139,14 @@ export const googleParticipantLoginCallback = async (req: Request, res: Response
         const code = req.query.code;
         if (!code) return res.status(400).json(new apiError(400, "Bad Request", "No code recieved from this google account"))
 
-        const { accessToken, refreshToken, updatedData } = await userService.googleLoginCallback(code, redirectUri, 'participant')
+        const { accessToken, refreshToken, result } = await userService.googleLoginCallback(code, redirectUri, 'participant')
 
-        Now the participant had logged in, we have to decide what contents we want to display them. If game has not setDefaultResultOrder, then display them only the static 'Rules Page', else display the contents of the game. 
+        // (FRONTEND PART) Now that the participant had logged in, we have to decide what contents we want to display them. If game is not running, then display them only the static 'Rules Page', else display the contents of the game. For that, we had added an extra field 'isGameRunning' in our 'result' so that the frontend can know whether the game is running or not   
 
         return res.status(200)
             .cookie('accessToken', accessToken, { httpOnly: true, secure: true })
             .cookie('refreshToken', refreshToken, { httpOnly: true, secure: true })
-            .json(new apiResponse(200, updatedData, "User logged in successfully"))
+            .json(new apiResponse(200, result, "User logged in successfully"))
 
     } catch (error: any) {
         if (error instanceof apiError) {
@@ -176,12 +176,13 @@ export const googleAdminLoginCallback = async (req: Request, res: Response) => {
         const code = req.query.code;
         if (!code) return res.status(400).json(new apiError(400, "Bad Request", "No code recieved from this google account"))
 
-        const { accessToken, refreshToken, updatedData } = await userService.googleLoginCallback(code, redirectUri, 'admin')
+        // (FRONTEND PART) Now that the admin had logged in, we have to decide what contents we want to display them. If game is not running, then display them the contents accordingly. For that, we had added an extra field 'isGameRunning' in our 'result' so that the frontend can know whether the game is running or not  
+        const { accessToken, refreshToken, result } = await userService.googleLoginCallback(code, redirectUri, 'admin')
 
         return res.status(200)
             .cookie('accessToken', accessToken, { httpOnly: true, secure: true })
             .cookie('refreshToken', refreshToken, { httpOnly: true, secure: true })
-            .json(new apiResponse(200, updatedData, "Admin logged in successfully"))
+            .json(new apiResponse(200, result, "Admin logged in successfully"))
 
     } catch (error: any) {
         if (error instanceof apiError) {
@@ -211,12 +212,13 @@ export const googleSuperadminLoginCallback = async (req: Request, res: Response)
         const code = req.query.code;
         if (!code) return res.status(400).json(new apiError(400, "Bad Request", "No code recieved from this google account"))
 
-        const { accessToken, refreshToken, updatedData } = await userService.googleLoginCallback(code, redirectUri, 'super-admin')
+        // (FRONTEND PART) Now that the super-admin had logged in, we have to decide what contents we want to display them. If game is not running, then display them the contents accordingly and if it's running then display the contents accordingly. For that, we had added an extra field 'isGameRunning' in our 'result' so that the frontend can know whether the game is running or not  
+        const { accessToken, refreshToken, result } = await userService.googleLoginCallback(code, redirectUri, 'super-admin')
 
         return res.status(200)
             .cookie('accessToken', accessToken, { httpOnly: true, secure: true })
             .cookie('refreshToken', refreshToken, { httpOnly: true, secure: true })
-            .json(new apiResponse(200, updatedData, "Super-Admin logged in successfully"))
+            .json(new apiResponse(200, result, "Super-Admin logged in successfully"))
 
     } catch (error: any) {
         if (error instanceof apiError) {

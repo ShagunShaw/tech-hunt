@@ -69,7 +69,6 @@ export const GameConfig = pgTable('game_config', {
     duration: smallint().notNull()          // (in seconds)
 })
 
-Add the Hints part also in questions (and penalties also, if not configured anywhere, but I think its configured at point.constant.ts file, just we need to implement it, check it once)
 export const Question = pgTable('question', {
     id: serial().primaryKey(),
     question: text().notNull(),
@@ -78,16 +77,12 @@ export const Question = pgTable('question', {
     hints: text().array().notNull()     // can add as many hints as the admin wants for a question
 })
 
-Dont let admin create themes. Don't remove the table either. Just seed the 6 themes directly in DB once — like you did for super admin. (dont forget this); Also the theme you will create should match the theme you have defined here in themeEnum
 export const Theme = pgTable('theme', {
     id: serial().primaryKey(),
     name: varchar({length: 50}).notNull().unique(),
     messagesOrder: integer().array(),      // will store array of message's id from the message table in sequence 
     questionOrder: integer().array()       // if the array is [52, 31, 10, 23, 11] that means DSA question id is 52, web ques id is 31, etc. from the same table (but then how will be distribute question of each domain to each theme if all questions are in the same table) 
 })
-
-Remove the below comment later, once you are done building that part:
-// Okk now coming to the questions table, we will store questions of all domains in one table only, at time of Promise.all(), we will run parallel tasks for DSA, Web, etc. Assign each question to each theme from each domain and that will be stored in our questionOrder. Now how to ensure, that question in the array appear in the same order as we had decided, like DSA -> Web -> ...    to ensure that we initially create a redis cache and insert all values to it like if its Web, then assign that question to arr[1], of its blockcain, then at arr[5], and once all the arr get filled, we will insert in our table, so that at the game time, backend just need to fetch row where question.id = x , where x is arr[y], where y is the stage they are currentl in
 
 export const ThemeMessage = pgTable('theme_message', {
     id: serial().primaryKey(),

@@ -6,6 +6,8 @@ import { Participant, Admin } from '../drizzle/schema'
 import { eq } from 'drizzle-orm'
 import { generateAccessToken, generateRefreshToken } from '../middlewares/verifyJWT'
 import { randomUUID } from 'crypto'
+import client from '../redis.config'
+import { sendEmail } from '../emailService/sendEmail'
 
 
 type JwtExpiry = `${number}m`
@@ -98,7 +100,22 @@ export const register = async (token: string, phone: string, college: string, de
             })
             .returning({ id: Participant.id, name: Participant.name, email: Participant.email, college: Participant.college, department: Participant.department, year: Participant.year });
 
-        dont forget to send 'success email' via 'kafka'
+            // Sending email upon successfull registration
+            const template = `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f4f6f9; padding: 20px;">
+          <div style="max-width: 500px; margin: 0 auto; background: #ffffff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <h2 style="color: #15803d; margin-top: 0;">Registration Confirmed!</h2>
+            <p style="color: #334155; font-size: 15px;">You have been successfully registered for the game. Get ready to compete!</p>
+            <p style="color: #475569; font-size: 14px;">Keep an eye on your inbox—we will share a WhatsApp group link for further event schedules, game details, and platform instructions shortly.</p>
+            <p style="color: #64748b; font-size: 12px; margin-bottom: 0;">Good luck, and see you on the leaderboards!</p>
+          </div>
+        </body>
+        </html>
+        `
+        if (!data[0]?.email) throw new apiError(500, "Email Not Found", "Registered participant email not found")
+        await sendEmail(data[0]?.email, "You have been registered successfully for the game", template)
 
         return data
     } catch (error: any) {
@@ -212,7 +229,17 @@ export const googleLoginCallback = async (code: any, redirectUri: string, role: 
                 .where(eq(Admin.id, data.id))
         }
 
-        return { accessToken, refreshToken, updatedData }
+        const running = await client.get('game:isRunning')
+        let isGameRunning;
+        if(!running || running === 'false') isGameRunning= false;
+        else            isGameRunning= true;
+
+        const result = {
+            updatedData,
+            isGameRunning
+        }
+
+        return { accessToken, refreshToken, result }
 
     } catch (error: any) {
         if (error instanceof apiError) {
