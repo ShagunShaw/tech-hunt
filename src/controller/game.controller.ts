@@ -77,7 +77,7 @@ export const updatePoints = async (req: Request, res: Response) => {
     try {
         const { groupId } = req.params
 
-        const finalResult = gameService.updatePoints(groupId)
+        const finalResult = await gameService.updatePoints(groupId)
 
         return res.status(200).json(new apiResponse(200, finalResult, "Points updated successfully. Take the next message provided and move ahead"))
     } catch (error: any) {
