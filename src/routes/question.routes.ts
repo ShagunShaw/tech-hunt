@@ -2,8 +2,10 @@ import { Router } from "express";
 import { verifyJWT } from "../middlewares/verifyJWT";
 import { authorize } from "../middlewares/verifyRole";
 import * as question from "../controller/question.controller"
+import { moderateLimiter } from "../rateLimiting/rateLimits";
 
 const router: Router= Router()
+router.use(moderateLimiter)
 
 // The six tech domains we have are: DSA, Web, AI/ML, Cybersecurity, Cloud & Devops, BlockChain (we'll hardcode this)
 

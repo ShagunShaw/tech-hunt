@@ -3,8 +3,11 @@ import { verifyJWT } from '../middlewares/verifyJWT'
 import { authorize } from '../middlewares/verifyRole'
 import * as superAdminController from "../controller/super-admin.controller"
 import { isRunning } from '../middlewares/verifyStartStatus'
+import { strictLimiter } from '../rateLimiting/rateLimits'
 
 const router: Router = Router()
+router.use(strictLimiter)
+
 
 router.get('/pendingAdmin', verifyJWT, authorize('super-admin'), superAdminController.getPendingAdmins)
 

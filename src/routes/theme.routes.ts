@@ -2,8 +2,10 @@ import { Router } from 'express'
 import { verifyJWT } from '../middlewares/verifyJWT'
 import { authorize } from '../middlewares/verifyRole'
 import * as theme from "../controller/theme.controller"
+import { moderateLimiter } from '../rateLimiting/rateLimits'
 
 const router: Router= Router()
+router.use(moderateLimiter)
 
 router.get("/", verifyJWT, authorize('admin', 'super-admin'), theme.getAllThemes) 
 
@@ -21,7 +23,7 @@ router.patch("/message/:messageId", verifyJWT, authorize('admin', 'super-admin')
 
 router.delete("/message/:messageId", verifyJWT, authorize('admin', 'super-admin'), theme.deleteThemeMessage)
 
-router.post("/reorder/:themeId", verifyJWT, authorize('admin', 'super-admin'), theme.reorderThemeMessage)
+router.post("/reorder/:themeId", moderateLimiter, verifyJWT, authorize('admin', 'super-admin'), theme.reorderThemeMessage)
 
 
 export default router;
