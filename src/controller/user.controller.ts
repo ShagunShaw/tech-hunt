@@ -3,7 +3,7 @@ import * as userService from '../service/user.service'
 import { apiError } from '../utils/ApiError'
 import { apiResponse } from '../utils/ApiResponse'
 
-// google console mei jaake last mei select kro, what all info you want from person google account like email, username, and googleId
+google console mei jaake last mei select kro, what all info you want from person google account like email, username, and googleId
 
 export const googleParticipantRedirect = (req: Request, res: Response) => {
     const redirectUri = 'http://localhost:3000/api/v1/auth/google/register/callback';

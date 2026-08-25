@@ -149,8 +149,6 @@ export const registerAdmin = async (token: string, phone: string, description: s
             })
             .returning({ id: Admin.id, name: Admin.name, email: Admin.email, description: Admin.description });
 
-        dont forget to add our 'super-admin' directly in our database
-
         return data
     } catch (error: any) {
         if (error instanceof apiError) {
